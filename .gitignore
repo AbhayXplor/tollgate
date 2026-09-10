@@ -21,3 +21,6 @@ Thumbs.db
 
 # theater offline rehearsals
 results/theater_mock*
+
+# local-only handoff doc, never publish
+DEVLOG.md
