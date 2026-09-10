@@ -3,6 +3,7 @@
 tollgate doctor   resolve models against the live API (never assume), test calls
 tollgate run      one test against one config (baseline = all defences off)
 tollgate immune   the break -> patch -> price -> gate loop
+tollgate evolve   the self-learning loop: red team agent + classifier retraining + gate
 tollgate sweep    every config x every test x repeats
 tollgate report   metrics summary from results.jsonl
 tollgate console  serve the ops console (offline, reads results files)
@@ -174,6 +175,36 @@ def cmd_immune(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_evolve(args: argparse.Namespace) -> int:
+    cfg, client, world = _common(args)
+    attacker = client
+    if not args.mock and cfg.api_key():
+        from tollgate.llm.gemini_client import make_client
+
+        attacker = make_client(cfg, "attacker", force_mock=False)
+        console.print(f"[green]attacker model: {attacker.model}[/green] (throttled client)")
+    from tollgate.runners.evolve import EvolutionLoop
+
+    loop = EvolutionLoop(cfg, world, client, attacker=attacker, rounds=args.rounds)
+    outcome = loop.run()
+    for e in outcome["timeline"]:
+        c = e.get("classifier", {})
+        console.print(f"[bold]round {e['round']}[/bold]: attack verdict={e['verdict']} | "
+                      f"classifier mode={c.get('mode')} acc={c.get('holdout_accuracy')} "
+                      f"f1={c.get('holdout_f1')} novel_recall={c.get('novel_recall_holdout')} | "
+                      f"honest {e['honest_completed']}/{e['honest_total']} | "
+                      f"bait FP={e['bait_fp']}/{len(e.get('bait_probes', []))}")
+        if e.get("verdict") == "succeeded":
+            console.print(f"  novel attack: {e['attack'][:140]}")
+            console.print(f"  causes: {e.get('causes')}")
+        g = e.get("gate", {})
+        mark = "[green]ACCEPTED[/green]" if g.get("accepted") else "[red]GATE FAILED[/red]"
+        console.print(f"  gate: {mark} toll={g.get('numbers', {}).get('toll_total')} pts")
+    console.print(f"[bold]evolution complete[/bold]: {len(outcome['timeline'])} rounds, "
+                  f"final classifier: {json.dumps(outcome['classifier_metrics'])}")
+    return 0
+
+
 def cmd_sweep(args: argparse.Namespace) -> int:
     cfg, client, world = _common(args)
     from tollgate.runners.sweep import load_config_file, run_sweep
@@ -215,6 +246,24 @@ def cmd_report(_: argparse.Namespace) -> int:
     for p in s["frontier"]:
         console.print(f"  config {p['config_id']}: blocked {p['attacks_blocked']}% | "
                       f"work {p['tasks_completed']}% (n={p['runs']})")
+
+    evo_file = ROOT / "results" / "evolution.jsonl"
+    if evo_file.exists():
+        et = Table(title="Evolution: the learning curve")
+        et.add_column("round"); et.add_column("attack verdict"); et.add_column("clf mode")
+        et.add_column("holdout acc"); et.add_column("holdout f1"); et.add_column("novel recall")
+        et.add_column("honest"); et.add_column("bait FP")
+        for line in evo_file.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            e = json.loads(line)
+            c = e.get("classifier", {})
+            et.add_row(str(e["round"]), e.get("verdict", "?"), str(c.get("mode")),
+                       str(c.get("holdout_accuracy")), str(c.get("holdout_f1")),
+                       str(c.get("novel_recall_holdout")),
+                       f"{e.get('honest_completed')}/{e.get('honest_total')}",
+                       str(e.get("bait_fp")))
+        console.print(et)
     return 0
 
 
@@ -244,6 +293,11 @@ def main() -> None:
     pi.add_argument("--mode", choices=["minimal", "aggressive"], default="minimal")
     pi.add_argument("--mock", action="store_true")
     pi.set_defaults(fn=cmd_immune)
+
+    pe = sub.add_parser("evolve")
+    pe.add_argument("--rounds", type=int, default=5)
+    pe.add_argument("--mock", action="store_true")
+    pe.set_defaults(fn=cmd_evolve)
 
     ps = sub.add_parser("sweep")
     ps.add_argument("--configs", nargs="+", default=["config/configs"])

@@ -29,13 +29,17 @@ class StackGuard(Guard):
         self.d2 = dcfg.get("D2") or {}
         self._classifier = None
         if self.d2.get("enabled"):
-            from .classifier import InjectionClassifier
+            live = self.d2.get("classifier")
+            if live is not None:   # a TrainableClassifier instance: the loop retrains it in place
+                self._classifier = live
+            else:
+                from .classifier import InjectionClassifier
 
-            self._classifier = InjectionClassifier(
-                threshold=float(self.d2.get("threshold", 0.5)),
-                bank=self.d2.get("bank") or [],
-                backend=self.d2.get("backend", "tfidf"),
-            )
+                self._classifier = InjectionClassifier(
+                    threshold=float(self.d2.get("threshold", 0.5)),
+                    bank=self.d2.get("bank") or [],
+                    backend=self.d2.get("backend", "tfidf"),
+                )
         self.sensitive_table = sensitive_value_table(_world_sensitive(world))
         self.dlp_strict = bool((dcfg.get("D6") or {}).get("strict", False))
         self.allowed_overrides: dict[str, set[str]] = {}

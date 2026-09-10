@@ -11,8 +11,18 @@ fallbacks:
   - "gemini-3.1-flash-lite"
   - "gemini-3.5-flash-lite"
 
+attacker:
+  budget_per_attempt: 24   # max LLM calls for one novel-attack proposal + retries
+  memory_chars: 3000       # reflection transcript cap per round
+preferred:
+  - "gemma-4"              # resolved by prefix match against ListModels output
+fallbacks:
+  - "gemini-3.1-flash-lite"
+  - "gemini-3.5-flash-lite"
+
 roles:
   target: preferred        # Orin — must be a real hosted model
+  attacker: preferred      # red-team agent; same free Gemma 4 tier, throttled client
   mutator: deterministic_first  # 9/10 strategies are pure code; LLM rephrase is optional
   judge: preferred         # exists to be attacked (A6), never trusted
 

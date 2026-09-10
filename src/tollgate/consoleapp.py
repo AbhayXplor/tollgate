@@ -36,6 +36,18 @@ def api_loop() -> JSONResponse:
     return JSONResponse(entries)
 
 
+@app.get("/api/evolution")
+def api_evolution() -> JSONResponse:
+    """The learning curve: per-round classifier metrics, attack outcomes, bait FPs."""
+    f = ROOT / "results" / "evolution.jsonl"
+    entries = []
+    if f.exists():
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                entries.append(json.loads(line))
+    return JSONResponse(entries)
+
+
 @app.get("/api/feed")
 async def api_feed() -> StreamingResponse:
     """SSE stream: emits current summary every 2s so the page live-updates."""
@@ -92,8 +104,13 @@ def index() -> HTMLResponse:
 </div>
 <div class="panels">
   <div class="panel"><b>SECURITY &harr; UTILITY FRONTIER</b><canvas id="frontier"></canvas></div>
-  <div class="panel"><b>LOOP FEED</b><div class="feed" id="feed"><div class="row">waiting for loop events&hellip;</div></div>
+  <div class="panel"><b>THE LEARNING CURVE <span style="color:#7f95bd;font-weight:400">(classifier, held-out numbers)</span></b><canvas id="learn"></canvas>
+    <div id="learn-line" style="margin-top:6px;color:#7f95bd;font-size:12px"></div></div>
+</div>
+<div class="panels" style="margin-top:14px">
+  <div class="panel"><b>RED TEAM FEED <span style="color:#7f95bd;font-weight:400">(live attacks + gate verdicts)</span></b><div class="feed" id="feed"><div class="row">waiting for loop events&hellip;</div></div>
     <div id="toll-line" style="margin-top:8px;color:#7f95bd;font-size:13px"></div></div>
+  <div class="panel"><b>NOVEL ATTACKS <span style="color:#7f95bd;font-weight:400">(invented by the red team agent)</span></b><div class="feed" id="rtfeed"><div class="row">waiting for evolve runs&hellip;</div></div></div>
 </div>
 <script>__CHART_JS__</script>
 <script>
@@ -108,7 +125,42 @@ async function refresh() {
     'B1 ordinary: ' + s.tcr_ordinary_b1 + '%  |  B2 lookalike: ' + s.tcr_lookalike_b2 +
     '%  |  false alarms: ' + s.false_alarms;
 }
-let chart;
+let chart, learnChart;
+async function loadEvolution() {
+  const ev = await (await fetch('/api/evolution')).json();
+  if (!ev.length) return;
+  const rounds = ev.map(e => 'R' + e.round);
+  const acc = ev.map(e => (e.classifier && e.classifier.holdout_accuracy) ?? null);
+  const f1 = ev.map(e => (e.classifier && e.classifier.holdout_f1) ?? null);
+  const fp = ev.map(e => e.bait_fp ?? 0);
+  const ctx = document.getElementById('learn');
+  if (window.Chart) {
+    const data = { labels: rounds, datasets: [
+      { label: 'holdout accuracy', data: acc, borderColor:'#5df2a6', backgroundColor:'#5df2a6', tension:0.3 },
+      { label: 'holdout F1', data: f1, borderColor:'#5b8cff', backgroundColor:'#5b8cff', tension:0.3 },
+      { label: 'bait false alarms', data: fp, borderColor:'#ff6b81', backgroundColor:'#ff6b81', tension:0.3 } ]};
+    if (learnChart) { learnChart.data = data; learnChart.update(); }
+    else learnChart = new Chart(ctx, { type:'line', data,
+      options:{ animation:false, scales:{ y:{ min:0, max:1 } }, plugins:{legend:{labels:{color:'#7f95bd', boxWidth:10}}} } });
+  }
+  const last = ev[ev.length - 1];
+  document.getElementById('learn-line').textContent =
+    'mode: ' + (last.classifier ? last.classifier.mode : '?') +
+    ' | novel-attack recall (held-out): ' + ((last.classifier && last.classifier.novel_recall_holdout) ?? 'n/a');
+  const rt = document.getElementById('rtfeed'); rt.innerHTML = '';
+  for (const e of ev) {
+    const div = document.createElement('div');
+    div.className = 'row ' + (e.verdict === 'succeeded' ? 'rej' : '');
+    div.textContent = 'R' + e.round + ' [' + e.verdict + '] ' + (e.attack || '').slice(0, 110);
+    rt.appendChild(div);
+    if (e.verdict === 'succeeded') {
+      const h = document.createElement('div');
+      h.className = 'row gate';
+      h.textContent = '   hypothesis: ' + (e.hypothesis || '').slice(0, 110);
+      rt.appendChild(h);
+    }
+  }
+}
 function drawFrontier(pts) {
   const ctx = document.getElementById('frontier');
   if (!window.Chart || !pts.length) return;
@@ -135,6 +187,6 @@ async function loadLoop() {
     feed.appendChild(div);
   }
 }
-refresh(); loadLoop(); setInterval(refresh, 3000);
+refresh(); loadLoop(); loadEvolution(); setInterval(refresh, 3000); setInterval(loadEvolution, 5000);
 </script></body></html>"""
     return HTMLResponse(html.replace("__CHART_JS__", chart_js))

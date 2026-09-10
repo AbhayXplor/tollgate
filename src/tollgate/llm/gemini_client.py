@@ -24,7 +24,7 @@ class BudgetExceeded(RuntimeError):
 
 
 class GeminiClient:
-    def __init__(self, cfg: Config, candidates: list[str]) -> None:
+    def __init__(self, cfg: Config, candidates: list[str], min_interval_s: float = 2.5) -> None:
         from google import genai
         from google.genai import types as t  # noqa: F401  (used via self._t)
 
@@ -39,6 +39,8 @@ class GeminiClient:
         self.max_usd = cfg.budget.max_usd
         self.price_in = cfg.pricing_per_mtok.input / 1_000_000
         self.price_out = cfg.pricing_per_mtok.output / 1_000_000
+        self.min_interval_s = min_interval_s
+        self._last_call: float = 0.0
 
     @property
     def cost_usd(self) -> float:
@@ -75,6 +77,10 @@ class GeminiClient:
         max_output_tokens: int = 1024,
     ) -> LLMResponse:
         self._check_budget()
+        gap = time.time() - self._last_call
+        if gap < self.min_interval_s:
+            time.sleep(self.min_interval_s - gap)
+        self._last_call = time.time()
         t = self._t
 
         system_instruction: str | None = None
@@ -191,10 +197,9 @@ def make_client(cfg: Config, model_role: str = "target", force_mock: bool = Fals
         from .mock import MockLLM
 
         return MockLLM()
-    preferred = [m for m in cfg.models.preferred]
-    fallbacks = [m for m in cfg.models.fallbacks]
-    if model_role in cfg.models.roles and cfg.models.roles[model_role] == "preferred":
-        ordered = preferred + fallbacks
-    else:
-        ordered = fallbacks + preferred
+    roles = cfg.models.roles
+    role = roles.get(model_role, "preferred") if model_role else "preferred"
+    preferred = list(cfg.models.preferred)
+    fallbacks = list(cfg.models.fallbacks)
+    ordered = preferred + fallbacks if role == "preferred" else fallbacks + preferred
     return GeminiClient(cfg, ordered)

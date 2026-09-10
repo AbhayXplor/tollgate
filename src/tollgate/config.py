@@ -59,11 +59,17 @@ class Generation(BaseModel):
     max_output_tokens: int = 1024
 
 
+class AttackerCfg(BaseModel):
+    budget_per_attempt: int = 24
+    memory_chars: int = 3000
+
+
 class ModelsCfg(BaseModel):
     preferred: list[str]
     fallbacks: list[str]
     roles: dict[str, str]
     generation: Generation
+    attacker: AttackerCfg = AttackerCfg()
 
 
 class Config(BaseModel):
