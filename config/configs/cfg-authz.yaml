@@ -1,0 +1,10 @@
+# Balanced + precise capability control: the reset tool checks out-of-band
+# authorisation for the exact employee id (think IdP/MFA), instead of
+# switching whole tools off. Expected to block confused-deputy resets at
+# zero Toll. Compare with cfg-paranoid's blunt allowlist.
+D1: {enabled: true}
+D2: {enabled: false}
+D3: {enabled: true}
+D5: {enabled: true, mode: authz}
+D6: {enabled: true}
+strip_invisible: true
