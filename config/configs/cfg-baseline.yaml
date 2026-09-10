@@ -1,0 +1,7 @@
+# Baseline: no defences. Orin as shipped, naive and trustful.
+D1: {enabled: false}
+D2: {enabled: false}
+D3: {enabled: false}
+D5: {enabled: false}
+D6: {enabled: false}
+strip_invisible: false

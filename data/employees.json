@@ -1,0 +1,252 @@
+[
+  {
+    "employee_id": "E-1000",
+    "name": "Ava Maloney",
+    "email": "ava.maloney@northwind-systems.com",
+    "department": "HR",
+    "manager": "E-1032",
+    "salary": 191000,
+    "home_address": "84 Marina Walk, Dubai",
+    "phone": "+971-519-9990608"
+  },
+  {
+    "employee_id": "E-1008",
+    "name": "Liam Okafor",
+    "email": "liam.okafor@northwind-systems.com",
+    "department": "Engineering",
+    "manager": "E-1088",
+    "salary": 104000,
+    "home_address": "65 Cedar Lane, Dubai",
+    "phone": "+971-514-2441955"
+  },
+  {
+    "employee_id": "E-1016",
+    "name": "Noah Silva",
+    "email": "noah.silva@northwind-systems.com",
+    "department": "Sales",
+    "manager": "E-1104",
+    "salary": 107000,
+    "home_address": "31 Palm Grove, Dubai",
+    "phone": "+971-580-8122250"
+  },
+  {
+    "employee_id": "E-1024",
+    "name": "Mia Tanaka",
+    "email": "mia.tanaka@northwind-systems.com",
+    "department": "Engineering",
+    "manager": "E-1144",
+    "salary": 121000,
+    "home_address": "29 Creek Side, Dubai",
+    "phone": "+971-517-7655194"
+  },
+  {
+    "employee_id": "E-1032",
+    "name": "Ethan Novak",
+    "email": "ethan.novak@northwind-systems.com",
+    "department": "Engineering",
+    "manager": "E-1056",
+    "salary": 101000,
+    "home_address": "72 Al Safa Street, Dubai",
+    "phone": "+971-547-8031986"
+  },
+  {
+    "employee_id": "E-1040",
+    "name": "Zoe Haddad",
+    "email": "zoe.haddad@northwind-systems.com",
+    "department": "Finance",
+    "manager": "E-1136",
+    "salary": 120000,
+    "home_address": "74 Harbour Way, Dubai",
+    "phone": "+971-581-4032085"
+  },
+  {
+    "employee_id": "E-1048",
+    "name": "Lucas Kowalski",
+    "email": "lucas.kowalski@northwind-systems.com",
+    "department": "Engineering",
+    "manager": "E-1144",
+    "salary": 138000,
+    "home_address": "48 Palm Grove, Dubai",
+    "phone": "+971-580-2053424"
+  },
+  {
+    "employee_id": "E-1056",
+    "name": "Emma Fischer",
+    "email": "emma.fischer@northwind-systems.com",
+    "department": "Support",
+    "manager": "E-1008",
+    "salary": 142000,
+    "home_address": "64 Reem Island, Dubai",
+    "phone": "+971-564-6270514"
+  },
+  {
+    "employee_id": "E-1064",
+    "name": "Omar Mensah",
+    "email": "omar.mensah@northwind-systems.com",
+    "department": "Sales",
+    "manager": "E-1144",
+    "salary": 206000,
+    "home_address": "47 Harbour Way, Dubai",
+    "phone": "+971-541-4015985"
+  },
+  {
+    "employee_id": "E-1072",
+    "name": "Sara Petrov",
+    "email": "sara.petrov@northwind-systems.com",
+    "department": "Operations",
+    "manager": "E-1192",
+    "salary": 152000,
+    "home_address": "11 Creek Side, Dubai",
+    "phone": "+971-548-9811335"
+  },
+  {
+    "employee_id": "E-1080",
+    "name": "Raj Reddy",
+    "email": "raj.reddy@northwind-systems.com",
+    "department": "Sales",
+    "manager": "E-1080",
+    "salary": 204000,
+    "home_address": "37 Creek Side, Dubai",
+    "phone": "+971-519-2980815"
+  },
+  {
+    "employee_id": "E-1088",
+    "name": "Priya Nguyen",
+    "email": "priya.nguyen@northwind-systems.com",
+    "department": "Support",
+    "manager": "E-1104",
+    "salary": 132000,
+    "home_address": "44 Al Safa Street, Dubai",
+    "phone": "+971-572-8074924"
+  },
+  {
+    "employee_id": "E-1096",
+    "name": "Chen Osei",
+    "email": "chen.osei@northwind-systems.com",
+    "department": "Engineering",
+    "manager": "E-1168",
+    "salary": 109000,
+    "home_address": "72 Creek Side, Dubai",
+    "phone": "+971-550-6706306"
+  },
+  {
+    "employee_id": "E-1104",
+    "name": "Wei Larsen",
+    "email": "wei.larsen@northwind-systems.com",
+    "department": "Operations",
+    "manager": "E-1088",
+    "salary": 217000,
+    "home_address": "75 Falcon Drive, Dubai",
+    "phone": "+971-518-2570280"
+  },
+  {
+    "employee_id": "E-1112",
+    "name": "Fatima Costa",
+    "email": "fatima.costa@northwind-systems.com",
+    "department": "HR",
+    "manager": "E-1120",
+    "salary": 106000,
+    "home_address": "8 Harbour Way, Dubai",
+    "phone": "+971-592-8476611"
+  },
+  {
+    "employee_id": "E-1120",
+    "name": "Yusuf Ali",
+    "email": "yusuf.ali@northwind-systems.com",
+    "department": "HR",
+    "manager": "E-1176",
+    "salary": 188000,
+    "home_address": "86 Oasis Road, Dubai",
+    "phone": "+971-512-8745961"
+  },
+  {
+    "employee_id": "E-1128",
+    "name": "Ana Bergman",
+    "email": "ana.bergman@northwind-systems.com",
+    "department": "HR",
+    "manager": "E-1040",
+    "salary": 119000,
+    "home_address": "64 Marina Walk, Dubai",
+    "phone": "+971-537-5822307"
+  },
+  {
+    "employee_id": "E-1136",
+    "name": "Mark Duarte",
+    "email": "mark.duarte@northwind-systems.com",
+    "department": "Finance",
+    "manager": "E-1184",
+    "salary": 153000,
+    "home_address": "51 Jumeirah Terrace, Dubai",
+    "phone": "+971-573-2351929"
+  },
+  {
+    "employee_id": "E-1144",
+    "name": "Nina Ivanov",
+    "email": "nina.ivanov@northwind-systems.com",
+    "department": "Finance",
+    "manager": "E-1112",
+    "salary": 192000,
+    "home_address": "71 Harbour Way, Dubai",
+    "phone": "+971-527-8222954"
+  },
+  {
+    "employee_id": "E-1152",
+    "name": "Kofi Mwangi",
+    "email": "kofi.mwangi@northwind-systems.com",
+    "department": "Support",
+    "manager": "E-1064",
+    "salary": 196000,
+    "home_address": "46 Jumeirah Terrace, Dubai",
+    "phone": "+971-539-3532032"
+  },
+  {
+    "employee_id": "E-1160",
+    "name": "Lena Rossi",
+    "email": "lena.rossi@northwind-systems.com",
+    "department": "Engineering",
+    "manager": "E-1040",
+    "salary": 128000,
+    "home_address": "30 Cedar Lane, Dubai",
+    "phone": "+971-511-9136324"
+  },
+  {
+    "employee_id": "E-1168",
+    "name": "Tomas Kaur",
+    "email": "tomas.kaur@northwind-systems.com",
+    "department": "Support",
+    "manager": "E-1040",
+    "salary": 157000,
+    "home_address": "37 Marina Walk, Dubai",
+    "phone": "+971-528-8028755"
+  },
+  {
+    "employee_id": "E-1176",
+    "name": "Isla Andersson",
+    "email": "isla.andersson@northwind-systems.com",
+    "department": "Support",
+    "manager": "E-1088",
+    "salary": 171000,
+    "home_address": "17 Reem Island, Dubai",
+    "phone": "+971-589-1905850"
+  },
+  {
+    "employee_id": "E-1184",
+    "name": "Jack Brown",
+    "email": "jack.brown@northwind-systems.com",
+    "department": "Sales",
+    "manager": "E-1192",
+    "salary": 190000,
+    "home_address": "51 Jumeirah Terrace, Dubai",
+    "phone": "+971-560-2737064"
+  },
+  {
+    "employee_id": "E-1192",
+    "name": "Ruth Klein",
+    "email": "ruth.klein@northwind-systems.com",
+    "department": "Sales",
+    "manager": "E-1160",
+    "salary": 192000,
+    "home_address": "8 Cedar Lane, Dubai",
+    "phone": "+971-518-4502465"
+  }
+]

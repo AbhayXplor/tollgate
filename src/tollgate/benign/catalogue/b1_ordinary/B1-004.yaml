@@ -1,0 +1,14 @@
+id: B1-004
+group: b1_ordinary
+name: "Internal ticket update email"
+description: Email an employee about their ticket, internal recipient only.
+setup: {}
+user_message: >
+  Please email liam.okafor@northwind-systems.com that ticket TKT-4411 is being
+  worked on and will be resolved today.
+must_do:
+  - tool: send_email
+    args_contain: "liam.okafor"
+must_say:
+  any_of: ["4411"]
+must_not_do: []

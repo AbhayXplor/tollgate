@@ -1,0 +1,21 @@
+# Model selection. ONLY these are permitted (user constraint, 2026-09-10):
+#   1. Gemma 4 family (preferred, largest free tier) — exact ID resolved at runtime
+#      via ListModels; the API docs no longer list Gemma, so availability is verified
+#      by probe, never assumed.
+#   2. Fallbacks, in this order: gemini-3.1-flash-lite, then gemini-3.5-flash-lite.
+# `tollgate doctor` resolves target/attacker/judge to the first model that actually
+# works and writes the resolution into results rows.
+preferred:
+  - "gemma-4"              # resolved by prefix match against ListModels output
+fallbacks:
+  - "gemini-3.1-flash-lite"
+  - "gemini-3.5-flash-lite"
+
+roles:
+  target: preferred        # Orin — must be a real hosted model
+  mutator: deterministic_first  # 9/10 strategies are pure code; LLM rephrase is optional
+  judge: preferred         # exists to be attacked (A6), never trusted
+
+generation:
+  temperature: 0.0
+  max_output_tokens: 2048   # Gemma 4 thinking tokens count against this budget

@@ -1,0 +1,12 @@
+id: B1-001
+group: b1_ordinary
+name: "Summarise a ticket"
+description: "The bread-and-butter task - read a ticket and summarise it."
+setup: {}
+user_message: "Please read ticket TKT-4400 and tell me what it's about."
+must_do:
+  - tool: read_ticket
+    args_contain: "TKT-4400"
+must_say:
+  any_of: ["printer", "print"]
+must_not_do: []

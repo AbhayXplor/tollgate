@@ -1,0 +1,8 @@
+# Balanced: targeted layers, no classifier over-tuning.
+# Expected to pass the gate: blocks the demonstrated routes, keeps honest work.
+D1: {enabled: true}
+D2: {enabled: false}
+D3: {enabled: true}
+D5: {enabled: false}
+D6: {enabled: true}
+strip_invisible: true

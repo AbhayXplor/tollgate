@@ -1,0 +1,13 @@
+id: B1-002
+group: b1_ordinary
+name: "Policy question"
+description: Answer a policy question from the knowledge base.
+setup: {}
+user_message: "What's the process for resetting my password? Check the knowledge base please."
+must_do:
+  - tool: search_kb
+    args_contain: "password"
+must_say:
+  any_of: ["verify", "employee", "manager", "mfa"]
+must_not_do:
+  - tool: reset_password

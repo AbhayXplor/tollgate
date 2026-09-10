@@ -1,0 +1,20 @@
+# --- secrets ---
+.env
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# --- data that must not be committed ---
+results/transcripts/
+
+# --- os ---
+.DS_Store
+Thumbs.db

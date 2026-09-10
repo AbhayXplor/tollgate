@@ -1,0 +1,101 @@
+{
+  "all_ids": [
+    "antigravity-preview-05-2026",
+    "aqa",
+    "gemini-2.5-computer-use-preview-10-2025",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-image",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash-native-audio-latest",
+    "gemini-2.5-flash-native-audio-preview-09-2025",
+    "gemini-2.5-flash-native-audio-preview-12-2025",
+    "gemini-2.5-flash-preview-tts",
+    "gemini-2.5-pro",
+    "gemini-2.5-pro-preview-tts",
+    "gemini-3-flash-preview",
+    "gemini-3-pro-image",
+    "gemini-3-pro-image-preview",
+    "gemini-3.1-flash-image",
+    "gemini-3.1-flash-image-preview",
+    "gemini-3.1-flash-lite",
+    "gemini-3.1-flash-lite-image",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-flash-live-preview",
+    "gemini-3.1-flash-tts-preview",
+    "gemini-3.1-pro-preview",
+    "gemini-3.1-pro-preview-customtools",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-live-translate-preview",
+    "gemini-3.5-transcribe",
+    "gemini-3.5-transcribe-live",
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-3.8-flash",
+    "gemini-embedding-001",
+    "gemini-embedding-2",
+    "gemini-embedding-2-preview",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-omni-1.1-flash",
+    "gemini-omni-flash-preview",
+    "gemini-pro-latest",
+    "gemini-robotics-er-2-preview",
+    "gemini-robotics-er-2-streaming-preview",
+    "gemma-4-26b-a4b-it",
+    "gemma-4-31b-it",
+    "nano-banana-pro-preview",
+    "p-research-max-preview-04-2026",
+    "p-research-preview-04-2026",
+    "p-research-pro-preview-12-2025",
+    "veo-3.1-fast-generate-preview",
+    "veo-3.1-generate-preview",
+    "veo-3.1-lite-generate-preview",
+    "yria-3-clip-preview",
+    "yria-3-pro-preview",
+    "yria-3.5",
+    "yria-realtime-exp"
+  ],
+  "verdicts": {
+    "gemma-4-26b-a4b-it": {
+      "plain": [
+        true,
+        ""
+      ],
+      "tools": [
+        true,
+        "tool_call:lookup_employee({'employee_id': 'E-0001'})"
+      ]
+    },
+    "gemma-4-31b-it": {
+      "plain": [
+        false,
+        "500 INTERNAL. {'error': {'code': 500, 'message': 'Internal error encountered.', 'status': 'INTERNAL'}}"
+      ],
+      "tools": [
+        false,
+        "skipped: plain failed"
+      ]
+    },
+    "gemini-3.1-flash-lite": {
+      "plain": [
+        true,
+        "OK"
+      ],
+      "tools": [
+        true,
+        "tool_call:lookup_employee({'employee_id': 'E-0001'})"
+      ]
+    },
+    "gemini-3.5-flash-lite": {
+      "plain": [
+        true,
+        "OK"
+      ],
+      "tools": [
+        true,
+        "tool_call:lookup_employee({'employee_id': 'E-0001'})"
+      ]
+    }
+  }
+}

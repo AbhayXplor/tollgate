@@ -1,0 +1,9 @@
+# Maximum paranoia - everything on, classifier tuned aggressive.
+# This is the config our own gate is designed to REJECT when the Toll
+# outweighs the gain. It exists to demo the revert.
+D1: {enabled: true}
+D2: {enabled: true, threshold: 0.25}
+D3: {enabled: true}
+D5: {enabled: true, allow: [read_ticket, search_kb]}
+D6: {enabled: true, strict: true}
+strip_invisible: true
