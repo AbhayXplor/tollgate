@@ -19,7 +19,8 @@ results/transcripts/
 .DS_Store
 Thumbs.db
 
-# theater offline rehearsals
+# offline rehearsals (--mock, theater mock mode): never evidence
+results/mock/
 results/theater_mock*
 
 # local-only handoff doc, never publish

@@ -83,7 +83,23 @@ class Config(BaseModel):
     models: ModelsCfg
 
     def api_key(self) -> str | None:
-        return os.environ.get("GEMINI_API_KEY")
+        key = os.environ.get("GEMINI_API_KEY")
+        # the .env.example placeholder is not a key
+        return key if key and key != "your-key-here" else None
+
+    def for_mock(self) -> "Config":
+        """A copy whose evidence paths live under results/mock/. Mock and
+        rehearsal rows must never reach the official files, and the cached
+        global config must never be mutated to achieve that."""
+        c = self.model_copy(deep=True)
+        c.paths.results = "results/mock/results.jsonl"
+        c.paths.transcripts = "results/mock/transcripts"
+        c.paths.discovered_configs = "results/mock/discovered"
+        return c
+
+    def evidence_dir(self) -> Path:
+        """Where the loop/evolution/classifier/frontier files sit: next to results.jsonl."""
+        return self.paths.results_file().parent
 
 
 @lru_cache(maxsize=1)

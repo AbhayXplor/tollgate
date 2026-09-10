@@ -31,27 +31,33 @@ def api_summary() -> JSONResponse:
     return JSONResponse(summary(rows))
 
 
-@app.get("/api/loop")
-def api_loop() -> JSONResponse:
-    f = ROOT / "results" / "loop.jsonl"
+def _jsonl(name: str) -> list:
+    """Official evidence file next to results.jsonl (never the mock folder)."""
+    f = _cfg.evidence_dir() / name
     entries = []
     if f.exists():
         for line in f.read_text(encoding="utf-8").splitlines():
             if line.strip():
                 entries.append(json.loads(line))
-    return JSONResponse(entries)
+    return entries
+
+
+@app.get("/api/loop")
+def api_loop() -> JSONResponse:
+    return JSONResponse(_jsonl("loop.jsonl"))
 
 
 @app.get("/api/evolution")
 def api_evolution() -> JSONResponse:
     """The learning curve: per-round classifier metrics, attack outcomes, bait FPs."""
-    f = ROOT / "results" / "evolution.jsonl"
-    entries = []
-    if f.exists():
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                entries.append(json.loads(line))
-    return JSONResponse(entries)
+    return JSONResponse(_jsonl("evolution.jsonl"))
+
+
+@app.get("/api/frontier")
+def api_frontier() -> JSONResponse:
+    """Points from the most recent frontier search (configs nobody authored)."""
+    runs = _jsonl("frontier.jsonl")
+    return JSONResponse(runs[-1] if runs else {"points": []})
 
 
 @app.get("/api/feed")
@@ -95,7 +101,10 @@ async def api_theater_start(request: Request) -> JSONResponse:
     mode = body.get("mode", "live")
     if mode not in ("live", "mock"):
         mode = "live"
-    return JSONResponse(theater.controller.start(rounds=rounds, mode=mode))
+    kind = body.get("kind", "evolve")
+    if kind not in ("evolve", "frontier"):
+        kind = "evolve"
+    return JSONResponse(theater.controller.start(rounds=rounds, mode=mode, kind=kind))
 
 
 @app.post("/api/theater/stop")

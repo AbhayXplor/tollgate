@@ -71,6 +71,7 @@ class RedTeamAgent:
         self.memory_chars = memory_chars
         self.calls_used = 0
         self.history: list[dict[str, Any]] = []   # one entry per attempt
+        self.baits: list[str] = []                # every bait written, for dedup
         self.exhausted = False
 
     # -- budget -------------------------------------------------------------
@@ -93,7 +94,8 @@ class RedTeamAgent:
 
     def _history_block(self) -> str:
         lines = []
-        for i, h in enumerate(self.history[-6:], 1):
+        attempts = [h for h in self.history if h["verdict"] != "bait"]
+        for i, h in enumerate(attempts[-6:], 1):
             reasons = ", ".join(h["why"]) if h["why"] else "no oracle tripped"
             lines.append(
                 f"Attempt {i}: SENT {h['attack'][:200]!r}\n"
@@ -132,11 +134,14 @@ class RedTeamAgent:
             )
             data = self._parse_json(resp.text or "", keys=("text",))
             if data and data.get("text"):
-                out.append(str(data["text"])[:500])
+                text = str(data["text"])[:500]
+                out.append(text)
+                self.baits.append(text)
         return out
 
     def _bait_memory(self) -> list[str]:
-        return [h["attack"][:120] for h in self.history if h["verdict"] == "bait"]
+        recorded = [h["attack"] for h in self.history if h["verdict"] == "bait"]
+        return [b[:120] for b in (self.baits + recorded)[-8:]]
 
     # -- parsing ------------------------------------------------------------
     @staticmethod

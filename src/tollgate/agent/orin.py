@@ -39,6 +39,23 @@ def run_orin(
 ) -> RunResult:
     guard = guard or NoopGuard()
     ctx = ctx or {}
+    # guards written before the user-message hook existed simply don't filter input
+    check_user = getattr(guard, "check_user_message", None)
+    if check_user is not None:
+        user_message, in_reason = check_user(user_message, ctx)
+        if in_reason:
+            sandbox.record_guard_block("user_message", in_reason, user_message)
+            final = f"[REQUEST BLOCKED: {in_reason}]"
+            sandbox.record_transcript({"step": 0, "role": "guard", "text": final})
+            if tool_cb is not None:
+                tool_cb({"tool": "guard:user_message", "arguments": {},
+                         "allowed": False, "reason": in_reason, "step": 0})
+            # attribute the row to the target model even though it was never
+            # called: the run belongs to that model's experiment
+            return RunResult(final_answer=final, steps=0,
+                             model=str(getattr(client, "model", "unknown")),
+                             tool_events=sandbox.log.as_dicts())
+
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_message},

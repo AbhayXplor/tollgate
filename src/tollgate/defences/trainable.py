@@ -15,7 +15,9 @@ from typing import Any
 
 SEED = 13
 MIN_TRAIN = 8          # below this a train/test split is noise; bank mode is used
-MIN_POSITIVES = 2      # need both classes present before logistic regression trains
+MIN_PER_CLASS = 4      # each class needs this many unique examples before logreg trains
+                       # (v1 trained on 2 malicious vs 32 benign and reported 0.91
+                       # accuracy, which is exactly the majority-class rate)
 
 
 class TrainableClassifier:
@@ -34,6 +36,8 @@ class TrainableClassifier:
         self.evidence: list[dict[str, Any]] = []
         self._model = None
         self._vec = None
+        self._bank_vec = None
+        self._bank_m = None
         self.metrics: dict[str, Any] = {"mode": "bank", "trained": False}
 
     def __str__(self) -> str:
@@ -58,9 +62,15 @@ class TrainableClassifier:
         from sklearn.linear_model import LogisticRegression
         from sklearn.model_selection import train_test_split
 
-        texts = [e["text"] for e in self.evidence]
-        labels = [1 if e["label"] == "malicious" else 0 for e in self.evidence]
-        if len(texts) < MIN_TRAIN or min(sum(labels), len(labels) - sum(labels)) < MIN_POSITIVES:
+        # Dedupe by text (last label wins): the honest suite repeats every round,
+        # and a duplicate straddling the split leaks the answer into the holdout.
+        uniq: dict[str, dict[str, Any]] = {}
+        for e in self.evidence:
+            uniq[e["text"].strip()] = e
+        rows = list(uniq.values())
+        texts = [e["text"] for e in rows]
+        labels = [1 if e["label"] == "malicious" else 0 for e in rows]
+        if len(texts) < MIN_TRAIN or min(sum(labels), len(labels) - sum(labels)) < MIN_PER_CLASS:
             return self._train_bank()
 
         idx = list(range(len(texts)))
@@ -76,20 +86,27 @@ class TrainableClassifier:
         self._model.fit(Xtr, ytr)
 
         # Metrics come from the held-out split, never the training data.
-        acc = f1 = float("nan")
+        # Accuracy alone flatters an imbalanced set, so the majority-class rate
+        # and balanced accuracy are reported beside it.
+        acc = f1 = recall = bal_acc = majority = float("nan")
         if yte:
             pred = self._model.predict(Xte)
-            acc = float((pred == yte).mean()) if yte else float("nan")
+            acc = float((pred == yte).mean())
             tp = sum(1 for p, y in zip(pred, yte) if p == 1 and y == 1)
             fp = sum(1 for p, y in zip(pred, yte) if p == 1 and y == 0)
             fn = sum(1 for p, y in zip(pred, yte) if p == 0 and y == 1)
+            tn = sum(1 for p, y in zip(pred, yte) if p == 0 and y == 0)
             precision = tp / (tp + fp) if tp + fp else 0.0
             recall = tp / (tp + fn) if tp + fn else 0.0
+            specificity = tn / (tn + fp) if tn + fp else 0.0
             f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+            bal_acc = (recall + specificity) / 2
+            pos_rate = sum(yte) / len(yte)
+            majority = max(pos_rate, 1 - pos_rate)
 
         # Novel-attack recall, honestly: only novel rows that landed in the
         # held-out split. Scoring rows the model trained on would inflate it.
-        novel_test_idx = [i for i in te if self.evidence[i]["source"] == "novel"]
+        novel_test_idx = [i for i in te if rows[i]["source"] == "novel"]
         novel_recall = float("nan")
         if novel_test_idx:
             Xn = self._vec.transform([texts[i] for i in novel_test_idx])
@@ -100,10 +117,14 @@ class TrainableClassifier:
             "mode": "logreg",
             "trained": True,
             "n_evidence": len(texts),
+            "n_malicious": sum(labels),
             "n_train": len(tr),
             "n_test": len(te),
             "holdout_accuracy": round(acc, 3) if acc == acc else None,
-            "holdout_f1": round(f1, 3),
+            "majority_baseline_acc": round(majority, 3) if majority == majority else None,
+            "balanced_accuracy": round(bal_acc, 3) if bal_acc == bal_acc else None,
+            "malicious_recall": round(recall, 3) if recall == recall else None,
+            "holdout_f1": round(f1, 3) if f1 == f1 else None,
             "novel_recall_holdout": (round(novel_recall, 3)
                                      if novel_recall == novel_recall and novel_test_idx else None),
             "n_novel_holdout": len(novel_test_idx),
@@ -116,7 +137,9 @@ class TrainableClassifier:
         self._model = None
         self.metrics = {
             "mode": "bank", "trained": False,
-            "n_evidence": len(self.evidence),
+            "n_evidence": len({e["text"].strip() for e in self.evidence}),
+            "n_malicious": len({e["text"].strip() for e in self.evidence
+                                if e["label"] == "malicious"}),
             "bank_size": len(self.seed_bank) + 1,
             "threshold": self.threshold,
         }
@@ -134,14 +157,13 @@ class TrainableClassifier:
         return self._bank_score(text)
 
     def _bank_score(self, text: str) -> tuple[str, float]:
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        import numpy as np
+        if self._bank_vec is None:   # the seed bank never changes: fit once
+            from sklearn.feature_extraction.text import TfidfVectorizer
 
-        vec = TfidfVectorizer(ngram_range=(1, 2), analyzer="word",
-                              lowercase=True, sublinear_tf=True)
-        corpus = self.seed_bank + [DEFAULT_BANK_FALLBACK]
-        m = vec.fit_transform(corpus)
-        sims = (vec.transform([text]) @ m.T).toarray()[0]
+            self._bank_vec = TfidfVectorizer(ngram_range=(1, 2), analyzer="word",
+                                             lowercase=True, sublinear_tf=True)
+            self._bank_m = self._bank_vec.fit_transform(self.seed_bank + [DEFAULT_BANK_FALLBACK])
+        sims = (self._bank_vec.transform([text]) @ self._bank_m.T).toarray()[0]
         best = float(sims.max()) if sims.size else 0.0
         return ("injection" if best >= self.threshold else "benign", best)
 

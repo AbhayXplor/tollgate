@@ -194,9 +194,9 @@ class GeminiClient:
 def make_client(cfg: Config, model_role: str = "target", force_mock: bool = False):
     """Factory: mock when no key or --mock; otherwise Gemini with configured candidates."""
     if force_mock or not cfg.api_key():
-        from .mock import MockLLM
+        from .mock import GullibleMockLLM
 
-        return MockLLM()
+        return GullibleMockLLM()
     roles = cfg.models.roles
     role = roles.get(model_role, "preferred") if model_role else "preferred"
     preferred = list(cfg.models.preferred)

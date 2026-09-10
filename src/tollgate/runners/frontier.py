@@ -12,14 +12,26 @@ honest work (and at least one is strictly better).
 """
 from __future__ import annotations
 
+import json
 import random
+import time
 from typing import Any
 
+from .. import live
 from ..config import Config
 from ..llm.base import LLMClient
 from ..runners.base import append_result, config_hash, run_attack_once, run_benign_once
 from ..runners.gate import evaluate_gate
 from ..world.loader import World
+
+
+def write_frontier(cfg: Config, outcome: dict[str, Any]) -> None:
+    """Append one search run to frontier.jsonl next to results.jsonl."""
+    f = cfg.evidence_dir() / "frontier.jsonl"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    with open(f, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"ts": time.time(), **outcome}, default=str) + "\n")
+
 
 # Parametric proposal space: layers with continuous or combinatorial dials.
 # The search samples these; the gate decides, so a bad proposal costs one
@@ -34,6 +46,8 @@ DIALS: list[dict[str, Any]] = [
         ["read_ticket", "search_kb", "lookup_employee"],
         ["read_ticket", "search_kb", "send_email"],
     ]},
+    {"key": "D5", "kind": "authz"},
+    {"key": "D6", "kind": "toggle"},
     {"key": "D6", "kind": "strict"},
     {"key": "strip_invisible", "kind": "toggle"},
 ]
@@ -49,7 +63,9 @@ def _patch(dial: dict[str, Any], rng: random.Random) -> dict[str, Any]:
     if kind == "threshold":
         return {key: {"enabled": True, "threshold": rng.choice(dial["values"])}}
     if kind == "toolset":
-        return {key: {"enabled": True, "allow": rng.choice(dial["values"])}}
+        return {key: {"enabled": True, "mode": "allowlist", "allow": rng.choice(dial["values"])}}
+    if kind == "authz":
+        return {key: {"enabled": True, "mode": "authz"}}
     return {}
 
 
@@ -84,11 +100,12 @@ def merge(current: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
 
 
 def _price(cfg: Config, world: World, client: LLMClient, dcfg: dict[str, Any],
-           attacks: list, tasks: list, rng: random.Random,
-           slice_size: int = 6, label: str = "search") -> list[dict[str, Any]]:
+           attacks: list, tasks: list, label: str = "search") -> list[dict[str, Any]]:
+    """Run the given attacks + every honest task at `dcfg`. The caller fixes
+    the attack slice once, so before/after comparisons are like for like
+    (v1 reshuffled per proposal and compared different attack sets)."""
     rows: list[dict[str, Any]] = []
-    rng.shuffle(attacks)
-    for a in attacks[:slice_size] + attacks[slice_size:][:2]:
+    for a in attacks:
         row = run_attack_once(cfg, world, client, a, dcfg)
         row["search_label"] = label
         append_result(cfg, row)
@@ -124,7 +141,8 @@ def on_frontier(points: list[dict[str, Any]], point: dict[str, Any]) -> bool:
 
 class FrontierSearch:
     def __init__(self, cfg: Config, world: World, client: LLMClient,
-                 proposals: int = 8, seed: int = 13) -> None:
+                 proposals: int = 8, seed: int = 13, attack_slice: int = 8,
+                 progress_cb: Any = None) -> None:
         self.cfg = cfg
         self.world = world
         self.client = client
@@ -132,24 +150,29 @@ class FrontierSearch:
         self.proposals = proposals
         from ..attacks.suite import load_attacks, load_benign
 
-        root = cfg.paths.data_dir().parents[1]
+        root = cfg.paths.data_dir().parents[0]
         self.attacks = load_attacks(root)
         self.tasks = load_benign(root)
+        shuffled = list(self.attacks)
+        self.rng.shuffle(shuffled)
+        self.slice = shuffled[:attack_slice]
         self.current: dict[str, Any] = {
             "D1": {"enabled": False}, "D2": {"enabled": False},
             "D3": {"enabled": False}, "D5": {"enabled": False},
             "D6": {"enabled": False}, "strip_invisible": False,
         }
         self.log: list[dict[str, Any]] = []
+        self._progress = progress_cb or (lambda pct, note: None)
 
     def run(self) -> dict[str, Any]:
         baseline_rows = _price(self.cfg, self.world, self.client, self.current,
-                               list(self.attacks), list(self.tasks), self.rng,
-                               slice_size=len(self.attacks), label="baseline")
+                               self.slice, self.tasks, label="baseline")
         base_asr, base_tcr = _rates(baseline_rows)
         self.log.append({"proposal": "baseline", "config": self.current,
-                         "accepted": True, "asr": base_asr, "tcr": base_tcr,
+                         "accepted": True, "asr": round(base_asr, 1), "tcr": round(base_tcr, 1),
                          "config_id": config_hash(self.current)})
+        self._progress(0, f"baseline: ASR {base_asr:.0f}%, honest work {base_tcr:.0f}%")
+        current_rows = baseline_rows
 
         for i in range(1, self.proposals + 1):
             patch = propose_patch(self.current, self.rng)
@@ -157,20 +180,28 @@ class FrontierSearch:
                 break
             candidate = merge(self.current, patch)
             rows = _price(self.cfg, self.world, self.client, candidate,
-                          list(self.attacks), list(self.tasks), self.rng,
-                          label=f"proposal-{i}")
-            decision = evaluate_gate(self.cfg.gate, baseline_rows, baseline_rows, rows,
-                                     cause_eliminated=True)
+                          self.slice, self.tasks, label=f"proposal-{i}")
+            # a tweak must buy real security (G1 on the same attack slice) and
+            # cost no more honest work than the gate allows (G2-G4)
+            decision = evaluate_gate(self.cfg.gate, baseline_rows, current_rows, rows,
+                                     cause_eliminated=False)
             asr, tcr = _rates(rows)
             accepted = decision.accepted
             if accepted:
                 self.current = candidate
+                current_rows = rows
             self.log.append({
                 "proposal": f"proposal-{i}", "patch": patch, "config": candidate,
                 "config_id": config_hash(candidate), "accepted": accepted,
                 "gate_failed": decision.failed, "asr": round(asr, 1),
                 "tcr": round(tcr, 1),
             })
+            live.bus.emit("frontier", proposal=i, patch=patch, accepted=accepted,
+                          attacks_blocked=round(100.0 - asr, 1), tasks_completed=round(tcr, 1),
+                          failed=decision.failed)
+            self._progress(i * 100 // self.proposals,
+                           f"proposal {i}: {json.dumps(patch)} -> "
+                           f"{'ACCEPTED' if accepted else 'REVERTED'} (ASR {asr:.0f}%, work {tcr:.0f}%)")
 
         seen: dict[str, dict[str, Any]] = {}
         for e in self.log:
@@ -179,7 +210,7 @@ class FrontierSearch:
                 seen[cid] = e
         points = [{"config_id": cid, "attacks_blocked": round(100.0 - e["asr"], 1),
                    "tasks_completed": e["tcr"], "accepted": e["accepted"],
-                   "config": e["config"]}
+                   "label": e["proposal"], "config": e["config"]}
                   for cid, e in seen.items()]
         for p in points:
             p["on_frontier"] = on_frontier(points, p)

@@ -12,6 +12,13 @@ from typing import Any
 
 from ..world.loader import World
 
+# What the model receives from one tool call. Generous on purpose: the v1
+# harness truncated to 200 chars and silently cut every injection out of the
+# tickets it was supposed to test. The log keeps a short summary; the model
+# gets the real content.
+MAX_RESULT_CHARS = 4000
+SUMMARY_CHARS = 200
+
 
 @dataclass
 class ToolEvent:
@@ -70,9 +77,21 @@ class Sandbox:
             result = self._dispatch(name, args)
         except Exception as exc:  # noqa: BLE001: sandbox never crashes the loop
             result = {"error": str(exc)}
-        summary = json.dumps(result)[:200] if not isinstance(result, str) else result[:200]
-        self.log.add(ToolEvent(step=self._step, tool=name, arguments=args, result_summary=summary))
-        return summary
+        # ensure_ascii=False: invisible Unicode (tag chars, zero-widths) must reach
+        # the model as real code points, not as "\udb40..." escape text.
+        full = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+        self.log.add(ToolEvent(step=self._step, tool=name, arguments=args,
+                               result_summary=full[:SUMMARY_CHARS]))
+        self._transcript.append({"step": self._step, "role": "tool", "tool": name,
+                                 "result": full[:MAX_RESULT_CHARS]})
+        return full[:MAX_RESULT_CHARS]
+
+    def record_guard_block(self, channel: str, reason: str, text: str) -> None:
+        """A guard refusal that happened outside a tool call (e.g. the user message)."""
+        self._step += 1
+        self.log.add(ToolEvent(step=self._step, tool=f"guard:{channel}",
+                               arguments={"text": text[:SUMMARY_CHARS]}, result_summary="",
+                               blocked=True, block_reason=reason))
 
     def record_transcript(self, entry: dict[str, Any]) -> None:
         self._transcript.append(entry)

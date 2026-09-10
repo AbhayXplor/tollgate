@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from functools import lru_cache
 from pathlib import Path
@@ -9,6 +10,9 @@ from pathlib import Path
 from .generate import write_world
 
 SEED = 7
+
+_STOPWORDS = {"the", "and", "for", "how", "what", "can", "you", "are", "with", "this",
+              "that", "from", "about", "please", "check", "does", "into", "your", "my"}
 
 
 class World:
@@ -46,16 +50,23 @@ class World:
         return None
 
     def search_kb(self, query: str) -> list[dict]:
-        out = []
+        """Articles containing any meaningful query word, best match first.
+        (v1 matched on any word at all, so "a" or "the" returned every article.)"""
+        words = {w for w in re.findall(r"[a-z0-9-]+", query.lower())
+                 if len(w) >= 3 and w not in _STOPWORDS}
+        hits = []
         for sub in ("clean", "poisoned"):
             d = self.dir / "kb" / sub
             if not d.exists():
                 continue
-            for f in d.glob("*.md"):
-                text = f.read_text()
-                if any(w.lower() in text.lower() for w in query.split()):
-                    out.append({"article": f.stem, "body": text})
-        return out
+            for f in sorted(d.glob("*.md")):
+                text = f.read_text(encoding="utf-8")
+                low = text.lower()
+                score = sum(1 for w in words if w in low)
+                if score:
+                    hits.append((score, {"article": f.stem, "body": text}))
+        hits.sort(key=lambda h: -h[0])   # stable: ties keep clean-then-poisoned order
+        return [h for _, h in hits]
 
 
 @lru_cache(maxsize=1)
