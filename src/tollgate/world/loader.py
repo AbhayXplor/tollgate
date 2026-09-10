@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from functools import lru_cache
 from pathlib import Path
 
@@ -17,6 +18,11 @@ class World:
         self.secrets: dict[str, str] = json.loads((data_dir / "secrets.json").read_text())
 
     def reset(self) -> None:
+        # poison artifacts (planted tickets/KB articles) must not outlive a run
+        for sub in ("tickets/poisoned", "kb/poisoned"):
+            d = self.dir / sub
+            if d.exists():
+                shutil.rmtree(d)
         write_world(self.dir, seed=SEED)
         self.employees = json.loads((self.dir / "employees.json").read_text())
         self.secrets = json.loads((self.dir / "secrets.json").read_text())
