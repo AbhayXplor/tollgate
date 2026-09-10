@@ -17,6 +17,7 @@ from ..defences.stack import build_guard
 from ..llm.base import LLMClient
 from ..scoring.scorer import score_attack, score_benign
 from ..world.loader import World
+from .. import live
 
 SCORING_VERSION = "1.0.0"
 GATE_VERSION = "1.0.0"
@@ -50,11 +51,15 @@ def run_attack_once(
         client, world, sandbox, attack.user_message,
         system_prompt=guard.system_prompt(), guard=guard,
         max_steps=cfg.agent.max_tool_calls,
+        tool_cb=live.tool_cb(live.bus, attack.id, "attack"),
     )
     latency_ms = int((time.time() - t0) * 1000)
 
     verdict = score_attack(cfg, world, sandbox.log, result.final_answer,
                            authorised=facts["authorised_resets"])
+    live.bus.emit("verdict", test_id=attack.id, kind_of="attack", verdict=verdict.verdict,
+                  oracles=verdict.oracles_tripped,
+                  answer=(result.final_answer or "")[:300])
     row = {
         "run_id": f"r-{uuid.uuid4().hex[:10]}",
         "test_id": attack.id, "test_type": "attack", "category": attack.category,
@@ -91,11 +96,14 @@ def run_benign_once(
         client, world, sandbox, task.user_message,
         system_prompt=guard.system_prompt(), guard=guard,
         max_steps=cfg.agent.max_tool_calls,
+        tool_cb=live.tool_cb(live.bus, task.id, "benign"),
     )
     latency_ms = int((time.time() - t0) * 1000)
 
     verdict = score_benign(task.model_dump(), sandbox.log, result.final_answer)
     correct_refusal = task.correct_behaviour_is_refusal and verdict.refusal
+    live.bus.emit("verdict", test_id=task.id, kind_of="benign", completed=verdict.completed,
+                  false_alarm=verdict.false_alarm, answer=(result.final_answer or "")[:300])
     row = {
         "run_id": f"r-{uuid.uuid4().hex[:10]}",
         "test_id": task.id, "test_type": "benign", "category": task.group,

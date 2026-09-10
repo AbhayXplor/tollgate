@@ -19,13 +19,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from ..attacks.redteam import RedTeamAgent, behaviour_summary, failure_reasons
 from ..attacks.suite import Attack, load_attacks, load_benign
 from ..config import Config
 from ..defences.trainable import TrainableClassifier
 from ..llm.base import LLMClient
+from .. import live
 from ..runners.base import append_result, config_hash, run_attack_once, run_benign_once
 from ..runners.diagnose import diagnose
 from ..runners.gate import evaluate_gate
@@ -50,6 +51,7 @@ class EvolutionLoop:
         rounds: int = 5,
         seed: int = 13,
         d2_on_from_start: bool = True,
+        progress_cb: Callable[[int, str], None] | None = None,
     ) -> None:
         self.cfg = cfg
         self.world = world
@@ -72,6 +74,7 @@ class EvolutionLoop:
             # D2 with the live trainable classifier: this is the thing that learns.
             self.current["D2"] = {"enabled": True, "threshold": 0.5, "classifier": self.clf}
         self.timeline: list[dict[str, Any]] = []
+        self._progress = progress_cb or (lambda pct, note: None)
 
     @staticmethod
     def _seed_bank() -> list[str]:
@@ -92,10 +95,14 @@ class EvolutionLoop:
         baseline_tcr = 100.0 * sum(1 for r in baseline_rows if r["completed"]) / len(baseline_rows)
         self._baseline_rows = baseline_rows
         self._baseline_tcr = baseline_tcr
+        self._progress(0, f"baseline honest suite: {sum(1 for r in baseline_rows if r['completed'])}/{len(baseline_rows)} tasks completed")
 
         for round_no in range(1, self.rounds + 1):
             self.timeline.append(self._round(round_no))
             self._write_evidence()
+            self._progress(round_no * 100 // self.rounds,
+                           f"round {round_no}/{self.rounds}: verdict={self.timeline[-1]['verdict']}, "
+                           f"honest {self.timeline[-1]['honest_completed']}/{self.timeline[-1]['honest_total']}")
 
         self._persist_classifier()
         return {"timeline": self.timeline, "final_config": _public(self.current),
@@ -115,6 +122,8 @@ class EvolutionLoop:
             setup = {}
         entry["hypothesis"] = proposal.get("hypothesis", "")
         entry["attack_category"] = _classify_intent(atk_text)
+        live.bus.emit("attack", text=atk_text, hypothesis=entry["hypothesis"],
+                      intent=entry["attack_category"], round=round_no)
 
         # normalise the proposal into an Attack so apply_setup works
         atk = Attack(
@@ -168,9 +177,11 @@ class EvolutionLoop:
                 self.clf.add_evidence(b, "benign", "bait")
         entry["bait_probes"] = bait_results
         entry["bait_fp"] = sum(1 for b in bait_results if b["tripped"])
+        live.bus.emit("bait", probes=bait_results)
 
         # 6. retrain on everything learned this round (the learning curve point)
         entry["classifier"] = self.clf.train()
+        live.bus.emit("learn", round=round_no, metrics=entry["classifier"])
 
         # 7. the gate: did the round's defences pay for themselves?
         decision = evaluate_gate(self.cfg.gate, self._baseline_rows, self._baseline_rows,

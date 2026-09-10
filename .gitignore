@@ -18,3 +18,6 @@ results/transcripts/
 # --- os ---
 .DS_Store
 Thumbs.db
+
+# theater offline rehearsals
+results/theater_mock*

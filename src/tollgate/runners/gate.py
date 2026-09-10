@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..config import Gate
+from .. import live
 
 
 @dataclass
@@ -85,4 +86,5 @@ def evaluate_gate(
     if new_fa > gate.max_new_false_alarms:
         failed.append(f"G4: {new_fa} new false alarms > {gate.max_new_false_alarms}")
 
+    live.bus.emit("gate", accepted=not failed, failed=list(failed), numbers=numbers)
     return GateDecision(accepted=not failed, failed=failed, numbers=numbers)

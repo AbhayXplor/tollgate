@@ -7,6 +7,7 @@ tollgate evolve   the self-learning loop: red team agent + classifier retraining
 tollgate sweep    every config x every test x repeats
 tollgate report   metrics summary from results.jsonl
 tollgate console  serve the ops console (offline, reads results files)
+tollgate demo     serve the console, open the LIVE theater in your browser
 """
 from __future__ import annotations
 
@@ -267,10 +268,16 @@ def cmd_report(_: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_console(args: argparse.Namespace) -> int:
+def cmd_console(args: argparse.Namespace, open_browser: bool = False) -> int:
+    import threading
+    import webbrowser
     import uvicorn
 
-    console.print("[bold]console on http://127.0.0.1:8720[/bold] (offline)")
+    url = f"http://127.0.0.1:{args.port}"
+    page = "/theater" if open_browser else "/"
+    console.print(f"[bold]console on {url}[/bold] (theater: {url}/theater)")
+    if open_browser:
+        threading.Timer(1.5, lambda: webbrowser.open(url + page)).start()
     uvicorn.run("tollgate.consoleapp:app", host="127.0.0.1", port=args.port, reload=False)
     return 0
 
@@ -310,6 +317,10 @@ def main() -> None:
     pc = sub.add_parser("console")
     pc.add_argument("--port", type=int, default=8720)
     pc.set_defaults(fn=cmd_console)
+
+    pd = sub.add_parser("demo")
+    pd.add_argument("--port", type=int, default=8720)
+    pd.set_defaults(fn=lambda a: cmd_console(a, open_browser=True))
 
     args = p.parse_args()
     raise SystemExit(args.fn(args) or 0)

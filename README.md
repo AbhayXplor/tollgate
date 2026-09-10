@@ -99,14 +99,32 @@ tollgate evolve --rounds 5             # the self-learning loop: red team agent,
 tollgate sweep --configs config/configs
 tollgate report                        # ASR, TCR, Toll, frontier, learning curve
 tollgate console                       # web UI on http://127.0.0.1:8720
+tollgate demo                          # same, but opens the LIVE theater in your browser
 ```
 
 Every command accepts `--mock`, which swaps in a scripted model. The entire pipeline
-runs offline, and `pytest` (60 tests) needs no API key.
+runs offline, and `pytest` (61 tests) needs no API key.
 
 The target and the red team agent each get their own throttled client (2.5s between
 calls, exponential backoff on 429/503), so two agents sharing one free-tier key stay
 inside the rate limit.
+
+## The live theater
+
+`tollgate demo` opens a browser page where the whole loop runs while you watch:
+
+```bash
+tollgate demo        # console + live theater at http://127.0.0.1:8720/theater
+```
+
+Press START and the red team agent attacks, Orin's tool calls stream in one by one,
+the oracles stamp BREACHED or BLOCKED, the classifier retrains, bait probes fire,
+and the gate stamps ACCEPTED or REVERTED. Nothing is scripted: the attacker invents
+its own attacks each round, and verdicts come from the same mechanical oracles the
+CLI uses. An offline rehearsal button runs the identical pipeline on the mock model,
+for dead-wifi demos. Live runs append to results.jsonl like any other runner;
+mock rehearsals write to results/theater_mock.jsonl instead, so official numbers
+stay clean.
 
 ## What is inside
 

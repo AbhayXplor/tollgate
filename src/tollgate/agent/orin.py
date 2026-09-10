@@ -35,6 +35,7 @@ def run_orin(
     guard: Guard | None = None,
     max_steps: int = MAX_STEPS_DEFAULT,
     ctx: dict[str, Any] | None = None,
+    tool_cb: Any = None,
 ) -> RunResult:
     guard = guard or NoopGuard()
     ctx = ctx or {}
@@ -77,6 +78,11 @@ def run_orin(
                     sanitized, in_reason = guard.check_incoming(raw, ctx)
                     raw = sanitized if in_reason is None else f"[CONTENT BLOCKED: {in_reason}]"
                 tool_results.append({"name": tc.name, "result": raw})
+                if tool_cb is not None:
+                    tool_cb({
+                        "tool": tc.name, "arguments": tc.arguments,
+                        "allowed": allowed, "reason": reason, "step": step,
+                    })
             messages.append({"role": "user", "tool_results": tool_results})
             continue
 
