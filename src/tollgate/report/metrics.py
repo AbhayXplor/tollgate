@@ -69,11 +69,14 @@ def by_model(rows: list[dict]) -> dict[str, int]:
 
 
 def frontier_points(rows: list[dict]) -> list[dict[str, Any]]:
-    """One point per config that ran BOTH suites: (attacks blocked %, honest
-    work completed %). Configs with only one side (e.g. a loop's per-round
-    honest runs) can't be placed on a security/utility chart."""
+    """One point per authored config (sweep rows carry `config_name`) that ran
+    BOTH suites: (attacks blocked %, honest work completed %). The loops price
+    many intermediate configs on partial attack slices; those belong to their
+    own evidence files, not on the authored frontier. With no sweep rows at
+    all, every config that ran both suites is shown."""
+    swept = [r for r in rows if r.get("config_name")]
     by_config: dict[str, list[dict]] = defaultdict(list)
-    for r in rows:
+    for r in (swept or rows):
         by_config[r["config_id"]].append(r)
     points = []
     for cid, crows in by_config.items():

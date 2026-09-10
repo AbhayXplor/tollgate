@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import copy
 import json
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -74,6 +75,7 @@ class EvolutionLoop:
             budget_calls=cfg.models.attacker.budget_per_attempt,
             memory_chars=cfg.models.attacker.memory_chars,
         )
+        self.run_id = time.strftime("%Y%m%d-%H%M%S")   # groups this run's rounds
         self.current = _base_off()
         if d2_on_from_start:
             # D2 with the live trainable classifier: this is the thing that learns.
@@ -121,7 +123,7 @@ class EvolutionLoop:
                 "classifier_metrics": self.clf.metrics}
 
     def _round(self, round_no: int) -> dict[str, Any]:
-        entry: dict[str, Any] = {"round": round_no}
+        entry: dict[str, Any] = {"run_id": self.run_id, "round": round_no}
 
         # 1. the attacker thinks, with full memory of everything so far
         hint = self.timeline[-1]["attack_category"] if self.timeline else ""

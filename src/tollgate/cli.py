@@ -324,8 +324,13 @@ def cmd_console(args: argparse.Namespace, open_browser: bool = False) -> int:
     import webbrowser
     import uvicorn
 
+    import os
+
     url = f"http://127.0.0.1:{args.port}"
     page = "/theater" if open_browser else "/"
+    if getattr(args, "mock", False):
+        os.environ["TOLLGATE_EVIDENCE"] = "mock"
+        console.print("[yellow]dashboard shows REHEARSAL data from results/mock/[/yellow]")
     console.print(f"[bold]console on {url}[/bold] (theater: {url}/theater)")
     if open_browser:
         threading.Timer(1.5, lambda: webbrowser.open(url + page)).start()
@@ -375,10 +380,12 @@ def main() -> None:
 
     pc = sub.add_parser("console")
     pc.add_argument("--port", type=int, default=8720)
+    pc.add_argument("--mock", action="store_true", help="show offline rehearsal evidence")
     pc.set_defaults(fn=cmd_console)
 
     pd = sub.add_parser("demo")
     pd.add_argument("--port", type=int, default=8720)
+    pd.add_argument("--mock", action="store_true", help="show offline rehearsal evidence")
     pd.set_defaults(fn=lambda a: cmd_console(a, open_browser=True))
 
     args = p.parse_args()

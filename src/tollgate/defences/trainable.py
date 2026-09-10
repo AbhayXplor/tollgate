@@ -82,7 +82,10 @@ class TrainableClassifier:
         ytr = [labels[i] for i in tr]
         yte = [labels[i] for i in te]
 
-        self._model = LogisticRegression(max_iter=1000, C=2.0, random_state=SEED)
+        # balanced class weights: attacks are the rare class, and an unweighted
+        # model minimises loss by calling everything benign (recall 0.0)
+        self._model = LogisticRegression(max_iter=1000, C=2.0, random_state=SEED,
+                                         class_weight="balanced")
         self._model.fit(Xtr, ytr)
 
         # Metrics come from the held-out split, never the training data.
