@@ -1,4 +1,4 @@
-# 06 — The Defence Stack
+# 06, The Defence Stack
 
 Six layers. Each can be switched on or off. One of them has a continuous dial. Together
 they define the space of settings that Mode B explores.
@@ -78,13 +78,13 @@ works.
 
 ---
 
-## D1 — Prompt hardening
+## D1, Prompt hardening
 
 **What it does:** rewrites Orin's system prompt to be more resistant. Adds clear
 delimiters, tells the model which sources to trust, and repeats the critical rules at the
 end (models pay more attention to the end of a prompt).
 
-**Technique:** "spotlighting" — every piece of untrusted content is wrapped in markers,
+**Technique:** "spotlighting", every piece of untrusted content is wrapped in markers,
 and the prompt explicitly says that anything inside those markers is data to be read, never
 instructions to be followed.
 
@@ -101,7 +101,7 @@ baseline to compare against.
 
 ---
 
-## D2 — The injection classifier (the dial)
+## D2, The injection classifier (the dial)
 
 **What it does:** looks at every piece of untrusted content before Orin sees it, and scores
 how much it resembles a known injection attack. If the score is above a threshold, the
@@ -110,7 +110,7 @@ content is blocked or stripped.
 **How it works:**
 
 1. Keep a bank of known injection phrasings (starts with our ~70 attacks).
-2. Turn each one into an embedding — a list of numbers representing its meaning — using a
+2. Turn each one into an embedding, a list of numbers representing its meaning, using a
    small local model such as `all-MiniLM-L6-v2`.
 3. When new content arrives, embed it and compare against everything in the bank.
 4. Take the highest similarity score. If it is above `threshold`, block.
@@ -122,7 +122,7 @@ through. Sweeping it from 0 to 1 is what draws our curve.
 **`learned_bank: true`** is the immune-system feature. When Mode A finds an attack that
 succeeded, its embedding gets added to the bank. The classifier literally becomes better at
 recognising attack shapes it has already been hit with. This is the honest version of
-"learning" — it is real, it is explainable, and we can show the bank growing.
+"learning", it is real, it is explainable, and we can show the bank growing.
 
 **Cost:** one embedding call per piece of content. Milliseconds, and free (local model).
 **Expected value:** high block rate, and **high false alarm rate**. This is the layer that
@@ -130,10 +130,10 @@ generates the Toll.
 
 ---
 
-## D3 — Canary check
+## D3, Canary check
 
 **What it does:** checks every outgoing tool argument and every final answer for the canary
-string planted in the system prompt. If it appears, the system prompt has leaked — block
+string planted in the system prompt. If it appears, the system prompt has leaked, block
 and raise an alarm.
 
 **Cost:** a string search. Free.
@@ -142,12 +142,12 @@ honest request will ever contain a random 16-character string.
 
 **Important:** D3 is a *detector*, not a preventer. It catches the exact string. An
 attacker who asks Orin to translate its instructions into French, or paraphrase them, gets
-the content without the canary. We must say this in the report — it is a real limitation
+the content without the canary. We must say this in the report, it is a real limitation
 and being upfront about it is worth marks.
 
 ---
 
-## D4 — Quarantine (the two-model pattern)
+## D4, Quarantine (the two-model pattern)
 
 **What it does:** untrusted content never reaches Orin at all. Instead:
 
@@ -170,7 +170,7 @@ separately.
 
 ---
 
-## D5 — Capability gating (tool permissions)
+## D5, Capability gating (tool permissions)
 
 **What it does:** before starting, Orin must declare what kind of job this is. Each job
 type has an allow-list of tools.
@@ -185,7 +185,7 @@ job_types:
 ```
 
 If Orin declares "summarise_ticket" and then tries to call `send_email`, the call is
-refused. Not by a model deciding it looks suspicious — by a permission check.
+refused. Not by a model deciding it looks suspicious, by a permission check.
 
 **Cost:** one extra step at the start. Cheap.
 **Expected value:** this is the strongest layer against tool misuse and exfiltration,
@@ -198,10 +198,10 @@ another interesting slice of the Toll.
 
 ---
 
-## D6 — Outbound data check (DLP)
+## D6, Outbound data check (DLP)
 
 **What it does:** before anything leaves through `send_email` or appears in a final answer,
-check whether it contains sensitive values from our world — a salary figure, a home
+check whether it contains sensitive values from our world, a salary figure, a home
 address, an API key.
 
 Rather than guessing with patterns, we do it exactly: we know every sensitive value in
@@ -225,10 +225,10 @@ Our predictions, written down before we run anything, so we can check ourselves 
 | Layer | Stops | Does not stop | Guessed false alarms |
 |---|---|---|---|
 | D1 hardening | lazy direct injection | anything determined | ~0% |
-| D2 classifier | most known attack shapes | novel phrasings, encoded text | **high — 20-40%** |
+| D2 classifier | most known attack shapes | novel phrasings, encoded text | **high, 20-40%** |
 | D3 canary | exact prompt leaks | paraphrased leaks | ~0% |
-| D4 quarantine | most indirect injection | direct injection | medium — detail loss |
-| D5 capability | tool misuse, most exfiltration | attacks within allowed tools | medium — multi-step tasks |
+| D4 quarantine | most indirect injection | direct injection | medium, detail loss |
+| D5 capability | tool misuse, most exfiltration | attacks within allowed tools | medium, multi-step tasks |
 | D6 DLP | direct data theft | data described rather than quoted | low |
 
 Writing predictions down first is worth doing. If the results contradict us, that is a
@@ -239,16 +239,16 @@ pretending we knew all along.
 
 ## The configurations we will test
 
-Not all 2^6 combinations — many are pointless. We test:
+Not all 2^6 combinations, many are pointless. We test:
 
-1. **The threshold sweep** — D2 alone, threshold from 0.0 to 1.0 in steps of 0.05. About 21
+1. **The threshold sweep**, D2 alone, threshold from 0.0 to 1.0 in steps of 0.05. About 21
    configurations. This alone draws the main curve.
-2. **Each layer alone** — 6 configurations. Shows what each is worth by itself.
-3. **Sensible stacks** — about 10 realistic combinations, the kind a real team would ship.
-4. **Everything on** — 1 configuration. Maximum paranoia.
-5. **Whatever Mode A discovers** — the immune loop generates its own configurations as it
+2. **Each layer alone**, 6 configurations. Shows what each is worth by itself.
+3. **Sensible stacks**, about 10 realistic combinations, the kind a real team would ship.
+4. **Everything on**, 1 configuration. Maximum paranoia.
+5. **Whatever Mode A discovers**, the immune loop generates its own configurations as it
    patches, and every one of those gets plotted too.
 
 Roughly 40-50 configurations total. Each runs ~130 tests (70 attacks + 60 benign), three
-times over. That is around 18,000 agent runs, so cost planning matters — see
+times over. That is around 18,000 agent runs, so cost planning matters, see
 `13-risks-and-open-questions.md`.

@@ -6,8 +6,6 @@ transformers is an optional upgrade. D4 alone spends tokens, and only when on.
 """
 from __future__ import annotations
 
-import base64
-import codecs
 import re
 from typing import Any
 

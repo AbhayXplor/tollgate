@@ -1,4 +1,4 @@
-# 10 — Build Plan and Work Split
+# 10, Build Plan and Work Split
 
 Three people. The split is chosen so that each person owns a piece that can be built and
 tested without waiting on the others.
@@ -7,40 +7,40 @@ tested without waiting on the others.
 
 ## Who owns what
 
-### Person A — Aadit — Measurement
+### Person A, Aadit, Measurement
 **Owns the thing the project is judged on.**
 
 - The benign suite: all 60 tasks, especially the 20 honest lookalikes
 - `scoring/oracles.py` and `scoring/scorer.py`
-- `runners/sweep.py` — Mode B
-- `report/metrics.py` — ASR, TCR, Toll, efficiency, the frontier calculation
+- `runners/sweep.py`, Mode B
+- `report/metrics.py`, ASR, TCR, Toll, efficiency, the frontier calculation
 - The written report
 
 Why this pairing: the person who defines what "success" means should also be the person who
 computes the final numbers. It keeps the definitions honest.
 
-### Person B — Abhay — Attack
+### Person B, Abhay, Attack
 **Owns the offensive side and the loop.**
 
 - The attack catalogue: all 70 attacks across six categories
-- `attacks/mutator.py` — the rewriting engine
-- `attacks/invisible.py` — the Unicode hiding work
-- `runners/immune.py` — Mode A, including diagnosis and patch selection
+- `attacks/mutator.py`, the rewriting engine
+- `attacks/invisible.py`, the Unicode hiding work
+- `runners/immune.py`, Mode A, including diagnosis and patch selection
 - The learned bank feature inside D2
 - The ATB metric
 - `exfil_server/server.py`
 
-### Person C — Platform
+### Person C, Platform
 **Owns everything the other two build on top of.**
 
-- `agent/` — Orin, the tools, the sandbox, the event log
-- `world/` — the fake company data and the reset logic
-- `defences/` — all six layers behind one interface
-- `runners/base.py` — the shared single-run path
+- `agent/`, Orin, the tools, the sandbox, the event log
+- `world/`, the fake company data and the reset logic
+- `defences/`, all six layers behind one interface
+- `runners/base.py`, the shared single-run path
 - The dashboard
 - Repo setup, config system, CI, tests
 
-Person C is on the critical path at the start — nobody can test anything until the agent and
+Person C is on the critical path at the start, nobody can test anything until the agent and
 sandbox exist. So C builds first, and A and B write content (attacks, benign tasks) against
 the agreed file formats while waiting.
 
@@ -51,7 +51,7 @@ instead of in a queue.
 
 ## Milestones
 
-### M0 — Foundations
+### M0, Foundations
 *Everyone*
 
 - Repo created, Python environment, config system, `.gitignore` with `.env` in it
@@ -62,7 +62,7 @@ instead of in a queue.
 
 **Done when:** everyone can run `tollgate run --test hello` and see a logged tool call.
 
-### M1 — Orin exists and can be broken
+### M1, Orin exists and can be broken
 *Person C leads*
 
 - Orin runs the full tool loop against the fake world
@@ -71,21 +71,21 @@ instead of in a queue.
 - Three hand-written attacks succeed against it manually
 
 **Done when:** we can watch Orin email the salary table to an outside address. Record this
-video now — it is demo material and it will get harder to reproduce later.
+video now, it is demo material and it will get harder to reproduce later.
 
-### M2 — The two suites
+### M2, The two suites
 *Person A and Person B in parallel*
 
 - All ~70 attacks written and loading
 - All ~60 benign tasks written and loading
-- **The outsider review of the benign suite is done** — someone not on the team confirms
+- **The outsider review of the benign suite is done**, someone not on the team confirms
   every task is unarguably legitimate
 - All oracles implemented and unit tested
 
 **Done when:** `tollgate run` gives a correct verdict on every test with no defences on.
 This gives us our baseline ASR and TCR.
 
-### M3 — The defences
+### M3, The defences
 *Person C leads, Person B builds the learned bank*
 
 - All six layers implemented behind one interface
@@ -95,7 +95,7 @@ This gives us our baseline ASR and TCR.
 
 **Done when:** the same test gives different results under different configs, on purpose.
 
-### M4 — Both modes running
+### M4, Both modes running
 *Person B on Mode A, Person A on Mode B*
 
 - The immune loop runs end to end and writes discovered configurations
@@ -107,18 +107,18 @@ This gives us our baseline ASR and TCR.
 moment we find out whether the finding is real.** If the Toll turns out to be tiny, we need
 to know now, while there is still time to dig into the lookalike subset.
 
-### M5 — The output
+### M5, The output
 *Person A leads the report, Person C leads the dashboard*
 
 - Dashboard: slider, frontier chart, transcript viewer
 - All report figures generated from `results.jsonl`
 - The written report drafted against the required structure
-- The A6 scorer attack built and working — the closing twist
+- The A6 scorer attack built and working, the closing twist
 
 **Done when:** someone outside the team can read the report and explain the finding back to
 us correctly.
 
-### M6 — The stage
+### M6, The stage
 *Everyone*
 
 - The five-act demo rehearsed end to end, at least five times

@@ -1,12 +1,11 @@
 """Provider-agnostic LLM interface.
 
 Both the Gemini client and the offline mock implement `complete()`. Nothing
-else in the codebase imports an SDK directly — that is what keeps the whole
+else in the codebase imports an SDK directly: that is what keeps the whole
 pipeline testable with zero network.
 """
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -40,7 +39,3 @@ class LLMClient(Protocol):
         temperature: float = 0.0,
         max_output_tokens: int = 1024,
     ) -> LLMResponse: ...
-
-
-def tool_call_args(raw: str) -> dict[str, Any]:
-    return json.loads(raw) if raw else {}

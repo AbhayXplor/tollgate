@@ -1,4 +1,4 @@
-"""The AI judge — the control group, not the scoreboard.
+"""The AI judge: the control group, not the scoreboard.
 
 It scores the same runs an AI-judge-based system would rely on. Its verdicts
 are recorded next to the oracle verdicts and flagged `scored_by: judge`, so

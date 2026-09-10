@@ -1,4 +1,4 @@
-# 01 — The Pitch (v2)
+# 01, The Pitch (v2)
 
 ---
 
@@ -18,7 +18,7 @@ breaks the product ships anyway, because blocking is measurable and breaking is 
 
 **2. It is about to happen constantly.**
 
-September 3, 2026. GPT-6 Astra launches under an "AGI era" headline — and OpenAI
+September 3, 2026. GPT-6 Astra launches under an "AGI era" headline, and OpenAI
 pre-warns about its advanced cyber capabilities. Whatever we think of the AGI talk,
 the direction is not in doubt: agents will build agents, patch them, and swap the
 models underneath them continuously. Every one of those changes is a security change.
@@ -26,7 +26,7 @@ None of them is priced.
 
 **3. The missing piece is not intelligence. It is verification.**
 
-Ask a frontier model — or a coding CLI — to "secure this agent" and it will happily
+Ask a frontier model, or a coding CLI, to "secure this agent" and it will happily
 add guardrails all day. It will never, on its own, run your real honest workload
 against every guardrail it adds and tell you what the guardrails broke. Not because
 it can't. Because that requires an **artifact** (a corpus of legitimate work that
@@ -47,12 +47,12 @@ published. Smart is free. Verification is the bottleneck.
 
 ## The numbers we will stand on
 
-- **ASR** — attack success rate, per category. Lower is better.
-- **TCR** — task completion rate on ~60 legitimate helpdesk tasks. Higher is better.
-- **The Toll** — TCR lost per patch. The number vendors do not print.
-- **TCR-ordinary vs TCR-lookalike** — the loss concentrates in legitimate requests
+- **ASR**, attack success rate, per category. Lower is better.
+- **TCR**, task completion rate on ~60 legitimate helpdesk tasks. Higher is better.
+- **The Toll**, TCR lost per patch. The number vendors do not print.
+- **TCR-ordinary vs TCR-lookalike**, the loss concentrates in legitimate requests
   worded like attacks. That gap is the finding.
-- **ATB** — attempts-to-break. How much harder each accepted patch made the agent.
+- **ATB**, attempts-to-break. How much harder each accepted patch made the agent.
 
 Full definitions: `tollgate-docs/07-scoring-and-metrics.md`.
 
@@ -60,7 +60,7 @@ Full definitions: `tollgate-docs/07-scoring-and-metrics.md`.
 
 ## Who buys this, and what it replaces
 
-**The buyer:** every team about to deploy an LLM agent with guardrails — platform,
+**The buyer:** every team about to deploy an LLM agent with guardrails, platform,
 security, and AI-governance teams. Also guardrail vendors, who need workload-real
 false-positive numbers instead of marketing ones.
 
@@ -74,7 +74,7 @@ benchmark."* Good advice with no tool behind it. We are the tool.
 Fable 5 changed behaviour overnight. Astra shipped last week; the next one next
 quarter. Every model bump silently changes agent behaviour and guardrail tuning.
 Re-run the dual suite, diff the Toll, re-decide. That is a standing service with
-accumulated per-deployment data — the corpus gets better with every customer.
+accumulated per-deployment data, the corpus gets better with every customer.
 
 ---
 
@@ -85,23 +85,23 @@ accumulated per-deployment data — the corpus gets better with every customer.
 | Promptfoo, Garak, PyRIT, DeepTeam | Attack-side red teaming, free and mature | Never price the fix. Tell you it broke; not what the fix costs |
 | AgentDojo (ETH, NeurIPS '24) | Research benchmark: utility vs security on generic tasks | Not your workload, no lookalike-class corpus, no ship/no-ship decision |
 | Vendor guardrail benchmarks | Block rates on generic prompts | Their prompts, not yours. No false-positive pricing on real work |
-| **Tollgate** | **Break → patch → price → gate, on your workload, with the lookalike corpus** | — |
+| **Tollgate** | **Break → patch → price → gate, on your workload, with the lookalike corpus** |, |
 
-The moat is not the attacker — attackers are commoditised. The moat is the
+The moat is not the attacker, attackers are commoditised. The moat is the
 **corpus + the oracles + the accumulated per-deployment data**.
 
 ## Why a coding CLI won't just absorb this
 
 1. **Self-grading.** The same agent that builds and patches your agent would be grading
-   its own security work — while reading attacker-controlled text. Our A6 category
+   its own security work, while reading attacker-controlled text. Our A6 category
    proves an AI judge can be talked into reporting a clean pass during a live breach.
    As builders get more autonomous, independent mechanical verification gets *more*
    valuable, not less.
 2. **The artifact.** The bottleneck was never model capability. It is the lookalike
-   corpus and the oracle suite — data and methodology, built blind, outsider-reviewed,
+   corpus and the oracle suite, data and methodology, built blind, outsider-reviewed,
    compounding per deployment. Fable 5 proves capability is not the missing piece.
 3. **Standing verification.** A CLI does what it is asked, once. Drift means the real
-   need is continuous re-verification with history — diffing this month's Toll against
+   need is continuous re-verification with history, diffing this month's Toll against
    last month's. That is infrastructure, not a prompt.
 
 ---
@@ -111,10 +111,10 @@ The moat is not the attacker — attackers are commoditised. The moat is the
 | Criterion | Weight | Our answer |
 |---|---|---|
 | Fit to brief + business problem | 20% | Buyer: teams deploying agents. Replaces: vendor block rates and default thresholds, i.e. vibes. Verbatim brief language: "who buys, what does it replace" |
-| Relevance — why now | 15% | Dated receipts: Fable 5 over-refusals (June 2026), Astra cyber warning (Sept 3, 2026), Microsoft's in-the-wild Unicode smuggling advisory (Sept 3, 2026) |
+| Relevance, why now | 15% | Dated receipts: Fable 5 over-refusals (June 2026), Astra cyber warning (Sept 3, 2026), Microsoft's in-the-wild Unicode smuggling advisory (Sept 3, 2026) |
 | Prototype works | 25% | One command from README; deterministic replay via caching; Unicode attacks double as the "unexpected input" test |
 | Technical depth + correctness | 25% | Threshold sweep, 3 repeats with variance, unit-tested oracles, dominance/frontier maths, acceptance gate with explicit thresholds |
 | Innovation | 15% | The acceptance gate (new), honest lookalikes, A6 judge attack, loop with revert semantics |
 
-35% of the score (20+15) is business framing — the exact part five rival teams on our
+35% of the score (20+15) is business framing, the exact part five rival teams on our
 brief will all under-score. That is the winnable margin.

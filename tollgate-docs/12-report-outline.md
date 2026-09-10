@@ -1,4 +1,4 @@
-# 12 — The Written Report
+# 12, The Written Report
 
 Structure for the jury submission. Every graded item from the brief has a home here.
 
@@ -23,14 +23,14 @@ Sections 7 to 11 are where we go past the requirement.
 
 ## Structure
 
-### 1. Summary — one page
+### 1. Summary, one page
 
 The finding, stated plainly, with the three numbers that matter.
 
 > Prompt-injection guardrails are published with a block rate and no false-alarm rate. We
 > built an AI helpdesk agent, seventy attacks, sixty legitimate tasks, and six defence
 > layers, and measured both numbers across roughly fifty configurations. At the sensitivity
-> that blocks 95% of attacks, the agent also refuses 33% of legitimate helpdesk work — and
+> that blocks 95% of attacks, the agent also refuses 33% of legitimate helpdesk work, and
 > almost all of that loss is concentrated in honest requests that are worded like attacks.
 
 Write this last. Rewrite it four times.
@@ -71,7 +71,7 @@ and it is where a practitioner jury will probe.
 The six layers, what each one does, and where it sits. The configuration format. The idea
 that a defence is a dial rather than a switch, and why that matters for what follows.
 
-### 7. Results — attacks
+### 7. Results, attacks
 
 - Baseline attack success rate, overall and by category
 - The same after each defence layer, individually
@@ -80,12 +80,12 @@ that a defence is a dial rather than a switch, and why that matters for what fol
 
 Charts, not walls of numbers. Every chart generated from `results.jsonl`.
 
-### 8. Results — the cost
+### 8. Results, the cost
 
 **The section nobody else will have.**
 
 - Task completion rate at every configuration
-- Split into ordinary work and honest lookalikes — this is the graph that carries the paper
+- Split into ordinary work and honest lookalikes, this is the graph that carries the paper
 - The Toll for each configuration
 - Security bought per point of Toll, which is how we rank defences honestly
 - The frontier chart, with the dominated configurations called out by name
@@ -105,7 +105,7 @@ through a Markdown image URL.
 
 Why this one:
 
-- It requires no access to the system at all — anyone who can open a support ticket can run it
+- It requires no access to the system at all, anyone who can open a support ticket can run it
 - It is invisible to every human in the review chain
 - It leaves through a channel that looks like ordinary output
 - It defeats the two most common defences deployed today: prompt hardening and human review
@@ -116,7 +116,7 @@ Full transcript, tool log, and the exfil server capture.
 
 **The most important section in the report.** Numbers, not hedging.
 
-- Direct injection is untouched by quarantine — quarantine protects content routes only
+- Direct injection is untouched by quarantine, quarantine protects content routes only
 - The canary catches exact copies of the system prompt; paraphrase or translation walks past
 - Capability gating does nothing against attacks that stay within the allowed tools
 - The classifier can be defeated by novel phrasings; our attempts-to-break number is how
@@ -137,7 +137,7 @@ What we would actually tell a company deploying an agent.
 - Pick a classifier threshold from a curve you measured on your own workload, not from a
   vendor's default
 - Measure your own false-alarm rate before shipping, on legitimate requests that look
-  suspicious — and here is our list to start from
+  suspicious, and here is our list to start from
 
 ### 13. Limitations and future work
 

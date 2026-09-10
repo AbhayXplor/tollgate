@@ -57,8 +57,9 @@ class ImmuneLoop:
             "D3": {"enabled": False}, "D5": {"enabled": False},
             "D6": {"enabled": False}, "strip_invisible": False,
         }
-        self.attacks = load_attacks(Path(cfg.project) if False else _root())
-        self.benign = load_benign(_root())
+        root = Path(__file__).resolve().parents[3]
+        self.attacks = load_attacks(root)
+        self.benign = load_benign(root)
         self.timeline: list[dict[str, Any]] = []
 
     # -- pricing ------------------------------------------------------------
@@ -185,7 +186,3 @@ class ImmuneLoop:
         (d / f"discovered-{config_hash(self.current)}.yaml").write_text(
             json.dumps(self.current, indent=2), encoding="utf-8"
         )
-
-
-def _root() -> Path:
-    return Path(__file__).resolve().parents[3]

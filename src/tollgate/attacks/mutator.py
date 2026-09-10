@@ -21,6 +21,9 @@ class Mutation:
     encoding: str | None = None
 
 
+# Deterministic strategies cost zero tokens. `rephrase` needs a model and only
+# runs when the caller supplies one. `relocate` and `hide_tags` are the same
+# transform (payload moves into untrusted content as invisible characters).
 STRATEGIES = ["rephrase", "encode_b64", "encode_rot13", "leetspeak", "wrap_story",
               "relocate", "hide_tags", "zero_width", "nest_quotes", "authority"]
 

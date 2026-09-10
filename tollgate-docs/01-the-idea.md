@@ -1,4 +1,4 @@
-# 01 — The Idea
+# 01, The Idea
 
 ## Where the idea comes from
 
@@ -87,7 +87,7 @@ A fixed list of attacks measures one moment in time. It tells you "our agent sur
 40 attacks". It does not tell you how hard the agent is to break.
 
 So we also build an attacker that does not give up. It takes a base attack, and if it
-fails, it rewrites it and tries again — different wording, different encoding, hidden
+fails, it rewrites it and tries again, different wording, different encoding, hidden
 inside a document, split across several messages. It keeps going until it wins or runs out
 of budget.
 
@@ -159,7 +159,7 @@ people. That is the difference between coursework and work.
 
 There is one more finding, and it is the strongest closing move available.
 
-Automated AI security testing is usually scored by another AI — you ask a second model
+Automated AI security testing is usually scored by another AI, you ask a second model
 "did the agent leak anything here?" and trust its answer. That second model is a language
 model reading attacker-controlled text. Which means **it can be attacked too**.
 

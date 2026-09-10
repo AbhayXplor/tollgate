@@ -1,4 +1,4 @@
-# 09 — Repo Layout and Tech Stack
+# 09, Repo Layout and Tech Stack
 
 ---
 
@@ -9,7 +9,7 @@ Nothing else is close for this project.
 
 **Dashboard: a single static HTML page** with vanilla JavaScript and one chart library. No
 build step, no framework, no node_modules. It reads the results file and draws. This keeps
-the demo bulletproof — the thing most likely to fail on stage is a dev server, so we do not
+the demo bulletproof, the thing most likely to fail on stage is a dev server, so we do not
 have one.
 
 ### Libraries
@@ -142,26 +142,26 @@ tollgate/
 
 ## What the important files do
 
-**`agent/sandbox.py`** — the fake tools, and the event log. Everything downstream depends on
+**`agent/sandbox.py`**, the fake tools, and the event log. Everything downstream depends on
 this log being complete and accurate. If a tool call is not logged, it did not happen as far
 as our results are concerned.
 
-**`defences/guard.py`** — takes a configuration and builds the layer stack. Every layer has
+**`defences/guard.py`**, takes a configuration and builds the layer stack. Every layer has
 the same shape: `check_incoming(content)` and `check_outgoing(tool_call)`. Adding a seventh
 defence later means writing one file, not editing five.
 
-**`scoring/oracles.py`** — the most important file in the repo. Every number we publish comes
+**`scoring/oracles.py`**, the most important file in the repo. Every number we publish comes
 from these functions. They must be simple, obvious, and covered by tests. If an oracle has a
 bug, the entire project is wrong and we would not know.
 
-**`runners/base.py`** — runs one test against one config and writes one result line. Both
+**`runners/base.py`**, runs one test against one config and writes one result line. Both
 modes call it. Keeping this single is what stops Mode A and Mode B from drifting apart.
 
-**`attacks/invisible.py`** — encodes text into Unicode tag characters and decodes it back.
+**`attacks/invisible.py`**, encodes text into Unicode tag characters and decodes it back.
 Small file, big demo payoff. Also needs a `reveal()` helper so we can show the audience
 what was hidden.
 
-**`exfil_server/server.py`** — a tiny HTTP server that logs incoming requests and prints them
+**`exfil_server/server.py`**, a tiny HTTP server that logs incoming requests and prints them
 large on screen. This is what makes the stolen data arrive live during the demo. Twenty
 lines of code, and it is the most memorable twenty seconds of the presentation.
 
@@ -189,7 +189,7 @@ tollgate dashboard          # serves the static page against results.jsonl
 ## Config over code
 
 Nothing important is hard-coded. Model names, thresholds, budgets, file paths, the canary
-string — all in `config/`. Reasons:
+string, all in `config/`. Reasons:
 
 - We can re-run everything against a different model by changing one line
 - The jury can see exactly what settings produced which numbers

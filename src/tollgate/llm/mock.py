@@ -38,7 +38,7 @@ class MockLLM:
         self.calls.append({"messages": messages, "tools": tools or []})
         if not self.script:
             return LLMResponse(
-                text="(mock: script exhausted — refusing everything)",
+                text="(mock: script exhausted: refusing everything)",
                 usage_in=10,
                 usage_out=10,
                 model=self.model,

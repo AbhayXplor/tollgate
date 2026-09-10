@@ -1,4 +1,4 @@
-# 03 — Orin, The Target Agent
+# 03, Orin, The Target Agent
 
 Orin is the AI assistant we build in order to attack it. This page is its full spec.
 
@@ -72,7 +72,7 @@ Returns: ticket id, who opened it, subject, body, status.
 
 Searches the internal knowledge base and returns matching articles.
 
-Also untrusted — anyone in the company can write a KB article, so this is a second route
+Also untrusted, anyone in the company can write a KB article, so this is a second route
 for hidden instructions to reach Orin.
 
 Returns: a list of article titles and bodies.
@@ -146,10 +146,10 @@ Standard tool-calling loop. Nothing clever.
 
 Settings we fix for every run so results are comparable:
 
-- **Temperature 0** — makes the model as repeatable as it can be
-- **Max 8 tool calls** — stops runaway loops and caps cost
+- **Temperature 0**, makes the model as repeatable as it can be
+- **Max 8 tool calls**, stops runaway loops and caps cost
 - **Same model, same version, for every run in a given experiment**
-- **3 repeats of every test** — LLMs are not fully deterministic even at temperature 0, so
+- **3 repeats of every test**, LLMs are not fully deterministic even at temperature 0, so
   we run everything three times and report the average and the spread
 
 That last point matters more than it sounds. If we report a single run, a sharp jury member

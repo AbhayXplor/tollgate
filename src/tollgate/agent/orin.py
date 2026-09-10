@@ -6,7 +6,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..config import Config
 from ..defences.guard import Guard, NoopGuard
 from ..llm.base import LLMClient
 from ..world.loader import World
@@ -97,7 +96,3 @@ def run_orin(
         final_answer=final, steps=max_steps, usage_in=usage_in, usage_out=usage_out,
         model=model, tool_events=sandbox.log.as_dicts(),
     )
-
-
-def default_max_steps(cfg: Config) -> int:
-    return cfg.agent.max_tool_calls

@@ -68,7 +68,7 @@ class Sandbox:
 
         try:
             result = self._dispatch(name, args)
-        except Exception as exc:  # noqa: BLE001 — sandbox never crashes the loop
+        except Exception as exc:  # noqa: BLE001: sandbox never crashes the loop
             result = {"error": str(exc)}
         summary = json.dumps(result)[:200] if not isinstance(result, str) else result[:200]
         self.log.add(ToolEvent(step=self._step, tool=name, arguments=args, result_summary=summary))

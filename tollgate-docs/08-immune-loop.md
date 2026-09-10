@@ -1,4 +1,4 @@
-# 08 — Mode A: The Immune Loop
+# 08, Mode A: The Immune Loop
 
 Abhay's half of the project, specified in detail.
 
@@ -73,7 +73,7 @@ does it decide what defence to build?"
 
 ---
 
-## Step 3a — The mutator
+## Step 3a, The mutator
 
 Takes an attack that failed and rewrites it. Runs on a **local** model through Ollama,
 because this is where the call volume is.
@@ -89,7 +89,7 @@ Mutation strategies, applied one at a time so we can tell which one worked:
 | Relocate | Move it from the user message into a ticket, or into a KB article |
 | Hide | Convert it to invisible Unicode characters |
 | Split | Break it across several turns so no single message looks bad |
-| Authority | Add fake authority framing — "compliance requires", "security team" |
+| Authority | Add fake authority framing, "compliance requires", "security team" |
 | Nest | Put the instruction inside quoted text inside quoted text |
 
 Rules:
@@ -105,10 +105,10 @@ the pass/fail verdict does not change.
 
 ---
 
-## Step 3b — Diagnosis
+## Step 3b, Diagnosis
 
 When an attack succeeds, we read the tool event log and work out the cause. This is
-deterministic — a set of rules over the log, not an AI making a judgement.
+deterministic, a set of rules over the log, not an AI making a judgement.
 
 | What the log shows | Diagnosis |
 |---|---|
@@ -120,12 +120,12 @@ deterministic — a set of rules over the log, not an AI making a judgement.
 | The classifier was on, and scored the content below the threshold | Filter missed this phrasing |
 | A tool argument escaped the data folder | Unsafe argument handling |
 
-A single success can trigger several diagnoses at once. That is fine — it means several
+A single success can trigger several diagnoses at once. That is fine, it means several
 layers get considered.
 
 ---
 
-## Step 4 — Selecting the defence
+## Step 4, Selecting the defence
 
 The cause-to-fix table. Small, fixed, explainable.
 
@@ -136,14 +136,14 @@ The cause-to-fix table. Small, fixed, explainable.
 | Revealed its own instructions | **D3 canary** + **D1 hardening** | Detect the leak, and make it less likely |
 | Let private data out | **D6 DLP** | Check outbound content against known secrets |
 | Took a privileged action improperly | **D5 capability gating** | The tool should not have been available |
-| Filter missed this phrasing | **D2 learned bank** — add this attack's embedding | The learning step. Real, and demonstrable |
-| Unsafe argument handling | Sandbox path check | Not a model problem, a code bug — fix it |
+| Filter missed this phrasing | **D2 learned bank**, add this attack's embedding | The learning step. Real, and demonstrable |
+| Unsafe argument handling | Sandbox path check | Not a model problem, a code bug, fix it |
 
 Two selection modes to build:
 
-- **Minimal** — apply the single cheapest layer that addresses the cause. Produces a lean
+- **Minimal**, apply the single cheapest layer that addresses the cause. Produces a lean
   configuration and a nice narrative.
-- **Aggressive** — apply everything that addresses the cause. Produces a paranoid
+- **Aggressive**, apply everything that addresses the cause. Produces a paranoid
   configuration, which is useful because it lands at the far end of our chart.
 
 Running both and comparing them is itself a result: how much extra Toll does the paranoid
@@ -151,7 +151,7 @@ strategy buy you, and does it buy any extra security at all?
 
 ---
 
-## Step 6 — Handing configurations to Mode B
+## Step 6, Handing configurations to Mode B
 
 **This is the connection between the two halves, and it is the part to get right.**
 
@@ -198,7 +198,7 @@ brief asks for exactly that.
 
 **3. The ATB numbers** showing how much harder the agent got at each round.
 
-**4. A growing classifier bank** we can show live — 70 entries at the start, 130 by the end.
+**4. A growing classifier bank** we can show live, 70 entries at the start, 130 by the end.
 
 ---
 
@@ -217,7 +217,7 @@ Mitigations:
   all against direct injection and the loop will find that immediately.
 
 If the loop still converges too fast, that is itself reportable: *"our defence stack closed
-every route our attacker could find within its budget — here is what a smarter attacker
+every route our attacker could find within its budget, here is what a smarter attacker
 would still have."*
 
 ---
@@ -226,7 +226,7 @@ would still have."*
 
 The loop is where the money goes. Every attempt is at least one target-model call.
 
-- Mutator on a **local** model — free.
+- Mutator on a **local** model, free.
 - Cache identical (prompt, config) pairs so repeats cost nothing.
 - Cap total attempts per run of the loop, and log spend as it goes.
 - Do the exploratory work with a cheap hosted model, then re-run the final loop once on the

@@ -47,4 +47,5 @@ def run_sweep(
 
 
 def _root() -> Path:
+    """Repo root, for locating the test catalogues."""
     return Path(__file__).resolve().parents[3]

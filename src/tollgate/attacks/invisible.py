@@ -49,20 +49,3 @@ def has_invisible(text: str) -> bool:
     return any(
         (TAG_BASE <= ord(ch) <= TAG_BASE + 0x7F) or ch in ZERO_WIDTH for ch in text
     )
-
-
-HOMOGLYPHS = {"а": "a", "е": "e", "о": "o", "р": "p", "с": "c",
-              "х": "x", "у": "y", "і": "i", "ѕ": "s"}
-
-
-def homoglyph(text: str) -> str:
-    """Swap latin letters for identical-looking cyrillic ones (first occurrence each)."""
-    for cyr in HOMOGLYPHS:
-        text = text.replace(cyr, HOMOGLYPHS[cyr], 1)
-    return text
-
-
-def reveal(text: str) -> str:
-    """Human-readable rendering: invisible chars become visible markers."""
-    decoded = decode_tags(text)
-    return decoded.replace("\n", "\\n")

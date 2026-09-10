@@ -1,10 +1,10 @@
-# 13 — Risks and Open Questions
+# 13, Risks and Open Questions
 
 Written down so we notice them early instead of discovering them late.
 
 ---
 
-## Risk 1 — The Toll turns out to be small
+## Risk 1, The Toll turns out to be small
 
 **The risk:** we run the sweep and the classifier blocks 95% of attacks while only costing
 3% of legitimate work. The headline finding evaporates.
@@ -22,12 +22,12 @@ in the overlap.
 - Worst case, the finding inverts: *"the cost is lower than we predicted, and here is why
   the fear of guardrails is overstated."* Also publishable, also honest.
 
-**Detection:** we know at M4. Build a small pilot sweep early — five configs, twenty tests —
+**Detection:** we know at M4. Build a small pilot sweep early, five configs, twenty tests —
 so we get an early signal rather than finding out at the end.
 
 ---
 
-## Risk 2 — The immune loop converges immediately
+## Risk 2, The immune loop converges immediately
 
 **The risk:** the first patch stops everything, there is no round three, and the loop story
 collapses into a static before/after.
@@ -41,7 +41,7 @@ and here is the attempts-to-break number that shows how much harder it got."*
 
 ---
 
-## Risk 3 — Cost
+## Risk 3, Cost
 
 **The risk:** ~18,000 agent runs on a hosted model. At even a fraction of a cent per run this
 adds up, and it is easy to burn the budget on a sweep with a bug in it.
@@ -57,7 +57,7 @@ adds up, and it is easy to burn the budget on a sweep with a bug in it.
 
 ---
 
-## Risk 4 — A bug in an oracle
+## Risk 4, A bug in an oracle
 
 **The risk:** an oracle is wrong, every number in the project is wrong, and nothing looks
 broken.
@@ -72,7 +72,7 @@ This is the most dangerous risk in the project because it is silent.
 
 ---
 
-## Risk 5 — The demo fails on stage
+## Risk 5, The demo fails on stage
 
 **What we do about it:**
 - Nothing on stage calls an API. Everything pre-computed.
@@ -83,7 +83,7 @@ This is the most dangerous risk in the project because it is silent.
 
 ---
 
-## Risk 6 — We are accused of overclaiming
+## Risk 6, We are accused of overclaiming
 
 **The risk:** we say "immune system" and a jury member hears "it invents new defences", then
 finds out it is a lookup table, and stops trusting everything else we said.
@@ -97,7 +97,7 @@ cross-examined on. If it is not, soften it before the jury does.
 
 ---
 
-## Risk 7 — Three people, one codebase
+## Risk 7, Three people, one codebase
 
 **What we do about it:** agree the file formats at M0, one file per test case, clear
 ownership of directories, daily fifteen-minute check-in, small pull requests.
@@ -124,7 +124,7 @@ ownership of directories, daily fifteen-minute check-in, small pull requests.
    after we see M4 results and know the budget.
 
 6. **Who does the outsider review of the benign suite?** Needs to be someone not on the team.
-   Ask early — this is a real dependency on somebody else's time.
+   Ask early, this is a real dependency on somebody else's time.
 
 7. **What exactly is the canary?** A fixed string is easy to check but easy to strip. A
    per-run random string is stronger. Proposal: per-run random, recorded in the result row.

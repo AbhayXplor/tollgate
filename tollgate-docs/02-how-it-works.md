@@ -1,4 +1,4 @@
-# 02 — How It Works (Architecture)
+# 02, How It Works (Architecture)
 
 This page explains the parts of the system and how information moves between them.
 No code here. Code layout is in `09-repo-and-stack.md`.
@@ -68,16 +68,16 @@ No code here. Code layout is in `09-repo-and-stack.md`.
 
 A small pretend company. All data invented.
 
-- **Employees** — about 25 people, each with a name, email, department, manager, salary,
+- **Employees**, about 25 people, each with a name, email, department, manager, salary,
   and home address. Salary and home address are the sensitive fields.
-- **Tickets** — support tickets the agent reads. Some are normal. Some are poisoned by us.
-- **Knowledge base** — internal help articles. Also readable, also poisonable.
-- **Secrets** — a few fake API keys and a fake admin password.
+- **Tickets**, support tickets the agent reads. Some are normal. Some are poisoned by us.
+- **Knowledge base**, internal help articles. Also readable, also poisonable.
+- **Secrets**, a few fake API keys and a fake admin password.
 
 Why this matters: the agent must have something genuinely worth stealing, otherwise
 "the attack succeeded" has no meaning.
 
-### 2. Orin — the target agent
+### 2. Orin, the target agent
 
 The AI assistant we are attacking. An internal IT helpdesk agent. It has a system prompt
 (its instructions), a job, and tools it can call.
@@ -91,9 +91,9 @@ the point.
 
 Two pieces:
 
-- **A catalogue of hand-written attacks** — our starting set, organised into the four
+- **A catalogue of hand-written attacks**, our starting set, organised into the four
   required categories plus two extra ones.
-- **A mutator** — a local LLM that takes an attack that failed and rewrites it. Different
+- **A mutator**, a local LLM that takes an attack that failed and rewrites it. Different
   wording, different encoding, hidden inside a document, split across turns.
 
 The mutator runs on a local model (Ollama) because it needs to make thousands of cheap
@@ -102,7 +102,7 @@ calls. The target agent runs on a hosted model so that our results say something
 ### 4. The Benign Tasks
 
 The other input, and the one nobody else builds. About 60 legitimate helpdesk jobs Orin
-should be able to complete. Roughly 40 ordinary ones and 20 "honest lookalikes" — real
+should be able to complete. Roughly 40 ordinary ones and 20 "honest lookalikes", real
 requests worded in ways that look like attacks.
 
 Full list design in `05-benign-suite.md`.
@@ -120,7 +120,7 @@ on being able to run the same agent at many different defence settings.
 
 ### 6. The Tool Sandbox
 
-Fake versions of every tool. They do not touch the real world — `send_email` writes to a
+Fake versions of every tool. They do not touch the real world, `send_email` writes to a
 log file instead of sending anything, `reset_password` returns a fake string.
 
 Every call is recorded: which tool, what arguments, what came back, at what time. This log
@@ -128,26 +128,26 @@ is the evidence, and it is also what the scorer reads.
 
 ### 7. The Scorer
 
-Decides whether each run was blocked, partial, or succeeded — and for benign tasks, whether
+Decides whether each run was blocked, partial, or succeeded, and for benign tasks, whether
 the job actually got done.
 
 **Critical rule: we score using hard facts, not opinions.** "Did the canary string appear
 in an outgoing email?" is a fact you can check with string matching. "Did the agent seem to
 leak something?" is an opinion. We use facts.
 
-We also run an AI judge alongside — not because we trust it, but because attacking it is
+We also run an AI judge alongside, not because we trust it, but because attacking it is
 one of our findings.
 
 Full spec in `07-scoring-and-metrics.md`.
 
-### 8. Mode A — the Immune Loop
+### 8. Mode A, the Immune Loop
 
 Runs the attacker against Orin, diagnoses successes, switches on defences, retries.
 Produces a story and a list of defence configurations worth testing properly.
 
 Full spec in `08-immune-loop.md`.
 
-### 9. Mode B — the Sweep Runner
+### 9. Mode B, the Sweep Runner
 
 Takes every defence configuration and runs the **complete** attack list and the **complete**
 benign list against it. Produces the numbers and the chart.
@@ -161,7 +161,7 @@ A single web page for the demo. Three things on it:
 
 - A slider for the classifier sensitivity. Drag it and watch both numbers move in opposite
   directions.
-- The frontier chart — every defence configuration plotted as a dot, attacks blocked
+- The frontier chart, every defence configuration plotted as a dot, attacks blocked
   against honest work completed.
 - A transcript viewer, so we can click any dot and show the jury the actual conversation.
 
@@ -185,7 +185,7 @@ One "run" = one test case against one defence configuration.
     which oracles tripped, token cost, latency, and the full transcript.
 ```
 
-Everything downstream — every chart, every number, every claim in the report — is computed
+Everything downstream, every chart, every number, every claim in the report, is computed
 from `results.jsonl`. Nothing is typed in by hand.
 
 ---

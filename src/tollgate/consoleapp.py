@@ -1,4 +1,4 @@
-"""Tollgate console — the booth-facing product surface.
+"""Tollgate console: the booth-facing product surface.
 
 Reads results/ files only; never calls an API. FastAPI + one static page,
 Chart.js vendored locally so the demo survives dead wifi."""

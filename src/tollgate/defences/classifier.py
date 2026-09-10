@@ -1,4 +1,4 @@
-"""D2 injection classifier — classic ML, local, free.
+"""D2 injection classifier: classic ML, local, free.
 
 Default backend: TF-IDF (1-3 grams) + cosine similarity against a bank of
 known injection phrasings. Rephrased attacks share meaning, not strings —

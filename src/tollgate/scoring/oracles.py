@@ -13,7 +13,6 @@ from ..world.loader import World
 from .encodings import contains_any, sensitive_value_table
 
 CANARY_RE = re.compile(r"ORIN-CANARY-[0-9a-f]{4,}")
-EXTERNAL_DOMAIN_HINT = re.compile(r"@[A-Za-z0-9.-]+\.[a-z]{2,}$")
 
 
 def _outbound_texts(log: EventLog) -> list[tuple[str, dict[str, Any]]]:

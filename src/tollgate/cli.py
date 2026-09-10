@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -105,7 +104,6 @@ def _resolve_model(client, cfg) -> str:
 # ---------------------------------------------------------------------------
 def _common(args) -> tuple:
     cfg = load_config()
-    from tollgate.llm.base import LLMClient  # noqa: F401
     from tollgate.llm.mock import MockLLM
 
     if args.mock or not cfg.api_key():

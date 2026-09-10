@@ -1,17 +1,17 @@
-# 14 — Glossary
+# 14, Glossary
 
 Plain-English definitions of every term used in these documents.
 
 ---
 
 **Agent**
-An AI assistant that can do things, not just talk. It has tools it can call — read a file,
-send an email, look something up — and it decides when to use them.
+An AI assistant that can do things, not just talk. It has tools it can call, read a file,
+send an email, look something up, and it decides when to use them.
 
-**ASR — Attack Success Rate**
+**ASR, Attack Success Rate**
 The percentage of our attacks that achieved their goal. Lower is better.
 
-**ATB — Attempts To Break**
+**ATB, Attempts To Break**
 How many rewritten versions of an attack it took before one worked. Higher is better. A
 defence that raises this from 2 to 40 has clearly helped, even if it did not stop the attack
 completely.
@@ -33,7 +33,7 @@ Only giving the agent the tools it needs for the specific job it is doing. If th
 One specific combination of defence settings. Which layers are on, and at what sensitivity.
 Every config is one dot on our chart.
 
-**DLP — Data Loss Prevention**
+**DLP, Data Loss Prevention**
 A check on outgoing content that looks for sensitive values before they leave.
 
 **Direct injection**
@@ -61,7 +61,7 @@ Everything not on the frontier is a wasted setting.
 The general name for any filter or check placed around an AI to stop it doing bad things.
 
 **Homoglyph**
-A character that looks identical to another but is technically different — for example, a
+A character that looks identical to another but is technically different, for example, a
 Cyrillic "а" looks the same as a Latin "a". Used to slip past filters that match exact text.
 
 **Honest lookalike**
@@ -74,11 +74,11 @@ Our attack-and-patch cycle. The attacker tries, the system works out why an atta
 switches on the matching defence, and the attacker tries again.
 
 **Indirect injection**
-The attack is hidden inside content the agent reads — a document, a ticket, a web page —
+The attack is hidden inside content the agent reads, a document, a ticket, a web page —
 rather than typed at it directly. The most dangerous kind in practice, because the user
 never did anything wrong.
 
-**LLM — Large Language Model**
+**LLM, Large Language Model**
 The AI model underneath the agent. GPT, Claude, Llama and so on.
 
 **LLM-as-judge**
@@ -86,8 +86,8 @@ Using a second AI model to grade the results of a test. Convenient, and attackab
 why we do not rely on it.
 
 **Mutator**
-Our tool that rewrites a failed attack into a new variant — different wording, encoding,
-hiding place — and tries again.
+Our tool that rewrites a failed attack into a new variant, different wording, encoding,
+hiding place, and tries again.
 
 **Ollama**
 Software for running AI models locally on your own machine, free and offline. We use it for
@@ -128,7 +128,7 @@ part of the project.
 The hidden instructions given to an AI that define its role and rules. Users are not supposed
 to see it. Attackers try very hard to.
 
-**TCR — Task Completion Rate**
+**TCR, Task Completion Rate**
 The percentage of legitimate jobs the agent successfully completed. Higher is better. Our
 usability number.
 
