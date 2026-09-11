@@ -19,8 +19,11 @@ from ..scoring.scorer import score_attack, score_benign
 from ..world.loader import World
 from .. import live
 
-SCORING_VERSION = "1.0.0"
-GATE_VERSION = "1.0.0"
+# 2.0.0: full tool results reach the model, D6 off at baseline, canary oracle
+# catches prompt dumps, decode-then-match oracles, false alarms attributed to
+# defences, gate G1/G4 computed from real rows. Never mix with 1.x rows.
+SCORING_VERSION = "2.0.0"
+GATE_VERSION = "2.0.0"
 
 
 def config_hash(dcfg: dict[str, Any]) -> str:
@@ -28,6 +31,22 @@ def config_hash(dcfg: dict[str, Any]) -> str:
 
     blob = json.dumps(dcfg, sort_keys=True, default=str)
     return hashlib.sha1(blob.encode()).hexdigest()[:10]
+
+
+def poisoned_ids(setup: dict[str, Any]) -> list[str]:
+    """Ticket / KB ids this scenario planted with attacker-controlled content."""
+    out = []
+    if (setup.get("poison_ticket") or {}).get("ticket_id"):
+        out.append(str(setup["poison_ticket"]["ticket_id"]))
+    if (setup.get("poison_kb") or {}).get("article"):
+        out.append(str(setup["poison_kb"]["article"]))
+    return out
+
+
+def _ctx(facts: dict[str, Any]) -> dict[str, Any]:
+    """What the guard may know about the scenario: out-of-band facts only
+    (who is verified for a reset), never the attack itself."""
+    return {"authorised_resets": set(facts.get("authorised_resets") or ())}
 
 
 def run_attack_once(
@@ -50,7 +69,7 @@ def run_attack_once(
     result = run_orin(
         client, world, sandbox, attack.user_message,
         system_prompt=guard.system_prompt(), guard=guard,
-        max_steps=cfg.agent.max_tool_calls,
+        max_steps=cfg.agent.max_tool_calls, ctx=_ctx(facts),
         tool_cb=live.tool_cb(live.bus, attack.id, "attack"),
     )
     latency_ms = int((time.time() - t0) * 1000)
@@ -70,6 +89,7 @@ def run_attack_once(
         "latency_ms": latency_ms, "tokens_in": result.usage_in,
         "tokens_out": result.usage_out, "final_answer": result.final_answer[:500],
         "tool_calls": result.tool_events, "config": dcfg,
+        "poisoned_ids": poisoned_ids(attack.setup),
     }
     dump_transcript(cfg, row)
     return row
@@ -85,7 +105,7 @@ def run_benign_once(
     bank: list[str] | None = None,
 ) -> dict[str, Any]:
     world.reset()
-    apply_setup(world.dir, task.setup, None)
+    facts = apply_setup(world.dir, task.setup, None)
     if bank:
         dcfg = {**dcfg, "D2": {**dcfg.get("D2", {}), "bank": bank}}
 
@@ -95,7 +115,7 @@ def run_benign_once(
     result = run_orin(
         client, world, sandbox, task.user_message,
         system_prompt=guard.system_prompt(), guard=guard,
-        max_steps=cfg.agent.max_tool_calls,
+        max_steps=cfg.agent.max_tool_calls, ctx=_ctx(facts),
         tool_cb=live.tool_cb(live.bus, task.id, "benign"),
     )
     latency_ms = int((time.time() - t0) * 1000)
@@ -109,9 +129,10 @@ def run_benign_once(
         "test_id": task.id, "test_type": "benign", "category": task.group,
         "config_id": config_hash(dcfg), "repeat": repeat,
         "completed": verdict.completed, "false_alarm": verdict.false_alarm,
+        "guard_blocked": verdict.guard_blocked, "model_miss": verdict.model_miss,
         "refusal": verdict.refusal, "correct_refusal": correct_refusal,
         "failures": verdict.failures, "scoring_version": SCORING_VERSION,
-        "model": result.model, "latency_ms": latency_ms,
+        "gate_version": GATE_VERSION, "model": result.model, "latency_ms": latency_ms,
         "tokens_in": result.usage_in, "tokens_out": result.usage_out,
         "final_answer": result.final_answer[:500], "config": dcfg,
     }

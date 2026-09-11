@@ -36,10 +36,14 @@ def run_sweep(
         dcfg = load_config_file(cpath)
         for rep in range(repeats):
             for a in attacks:
-                append_result(cfg, run_attack_once(cfg, world, client, a, dcfg, repeat=rep))
+                row = run_attack_once(cfg, world, client, a, dcfg, repeat=rep)
+                row["config_name"] = cpath.stem
+                append_result(cfg, row)
                 ran += 1
             for t in tasks:
-                append_result(cfg, run_benign_once(cfg, world, client, t, dcfg, repeat=rep))
+                row = run_benign_once(cfg, world, client, t, dcfg, repeat=rep)
+                row["config_name"] = cpath.stem
+                append_result(cfg, row)
                 ran += 1
 
     return {"runs": ran, "configs": len(config_paths), "repeats": repeats,

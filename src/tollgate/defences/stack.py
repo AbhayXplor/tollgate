@@ -17,6 +17,7 @@ from ..world.loader import World
 from .guard import Guard
 
 SYSTEM_DOMAIN = "@northwind-systems.com"
+_TICKET_ID = re.compile(r"^TKT-\d{3,6}$", re.I)
 
 
 class StackGuard(Guard):
@@ -41,24 +42,49 @@ class StackGuard(Guard):
                     backend=self.d2.get("backend", "tfidf"),
                 )
         self.sensitive_table = sensitive_value_table(_world_sensitive(world))
-        self.dlp_strict = bool((dcfg.get("D6") or {}).get("strict", False))
-        self.allowed_overrides: dict[str, set[str]] = {}
+        d6 = dcfg.get("D6") or {}
+        self.dlp_strict = bool(d6.get("strict", False))
+        # strict implies enabled; a present-but-disabled block ({"enabled": false})
+        # must NOT switch DLP on (v1 bug: the no-defence baseline ran D6).
+        self.dlp_on = bool(d6.get("enabled")) or self.dlp_strict
 
     # -- D1 ---------------------------------------------------------------
     def system_prompt(self) -> str:
         return HARDENED_PROMPT if (self.cfg.get("D1") or {}).get("enabled") else NAIVE_PROMPT
 
     # -- guard interface ----------------------------------------------------
+    def check_user_message(self, text: str, ctx: dict[str, Any]) -> tuple[str, str | None]:
+        """Input filter on the direct user turn. Honest lookalikes live here, so
+        this is where an over-eager D2 charges its Toll."""
+        if self.cfg.get("strip_invisible") and has_invisible(text):
+            text = strip_invisible(text)
+        if self._classifier is not None and self.d2.get("scan_user", True):
+            label, score = self._classifier.score(text)
+            if label == "injection":
+                return text, f"D2: user message injection score {score:.2f} >= threshold"
+        return text, None
+
     def check_outgoing_tool(self, tool: str, args: dict[str, Any], ctx: dict[str, Any]) -> tuple[bool, str | None]:
-        # D5 capability gating
+        # D5 capability gating: "allowlist" (blunt: whole tools off) or
+        # "authz" (precise: each tool enforces its own contract on the exact
+        # arguments - the reset checks out-of-band authorisation like a real
+        # IdP-backed API, the ticket reader only accepts ticket ids)
         d5 = self.cfg.get("D5") or {}
         if d5.get("enabled"):
-            allowed = d5.get("allow") or {}
-            permitted = self.allowed_overrides.get(_job_key(ctx), set()) or set(allowed)
-            if permitted and tool not in permitted:
-                return False, f"D5: tool {tool} not permitted for this job"
+            if d5.get("mode", "allowlist") == "authz":
+                if tool == "reset_password":
+                    emp = str(args.get("employee_id", "")).strip().upper()
+                    authorised = {str(x).upper() for x in ctx.get("authorised_resets") or ()}
+                    if emp not in authorised:
+                        return False, f"D5-authz: no verified authorisation to reset {emp or '?'}"
+                if tool == "read_ticket" and not _TICKET_ID.match(str(args.get("ticket_id", "")).strip()):
+                    return False, "D5-authz: malformed ticket id"
+            else:
+                permitted = set(d5.get("allow") or [])
+                if permitted and tool not in permitted:
+                    return False, f"D5: tool {tool} not permitted for this job"
         # D6 DLP on outbound email
-        if tool == "send_email":
+        if tool == "send_email" and self.dlp_on:
             blob = " ".join(str(args.get(f, "")) for f in ("to", "subject", "body"))
             hit = contains_any(blob, self.sensitive_table)
             if hit:
@@ -92,17 +118,13 @@ class StackGuard(Guard):
         d3 = self.cfg.get("D3") or {}
         if d3.get("enabled") and (self.canary in text or CANARY_RE.search(text)):
             return text, "D3: canary in final answer"
-        if self.cfg.get("D6") or self.dlp_strict:
+        if self.dlp_on:
             hit = contains_any(text, self.sensitive_table)
             if hit:
                 return text, "D6: sensitive data in final answer"
             if self.dlp_strict and _suspicious_link(text):
                 return text, "D6-strict: suspicious link in final answer"
         return text, None
-
-
-def _job_key(ctx: dict[str, Any]) -> str:
-    return str(ctx.get("job_type", ""))
 
 
 def _suspicious_link(text: str) -> bool:

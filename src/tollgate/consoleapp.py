@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -22,36 +23,50 @@ from .report.metrics import read_rows, summary
 
 ROOT = Path(__file__).resolve().parents[2]
 app = FastAPI(title="Tollgate Console")
-_cfg = load_config()
+# `tollgate console --mock` shows the offline rehearsal evidence (results/mock/)
+# under a banner; by default only official scoring-v2 rows from real models.
+_MOCK = os.environ.get("TOLLGATE_EVIDENCE") == "mock"
+_cfg = load_config().for_mock() if _MOCK else load_config()
 
 
 @app.get("/api/summary")
 def api_summary() -> JSONResponse:
-    rows = read_rows(_cfg.paths.results_file())
+    rows = read_rows(_cfg.paths.results_file(), include_all=_MOCK)
     return JSONResponse(summary(rows))
+
+
+def _jsonl(name: str) -> list:
+    """Official evidence file next to results.jsonl (never the mock folder)."""
+    f = _cfg.evidence_dir() / name
+    entries = []
+    if f.exists():
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                entries.append(json.loads(line))
+    return entries
 
 
 @app.get("/api/loop")
 def api_loop() -> JSONResponse:
-    f = ROOT / "results" / "loop.jsonl"
-    entries = []
-    if f.exists():
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                entries.append(json.loads(line))
-    return JSONResponse(entries)
+    return JSONResponse(_jsonl("loop.jsonl"))
 
 
 @app.get("/api/evolution")
 def api_evolution() -> JSONResponse:
-    """The learning curve: per-round classifier metrics, attack outcomes, bait FPs."""
-    f = ROOT / "results" / "evolution.jsonl"
-    entries = []
-    if f.exists():
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                entries.append(json.loads(line))
+    """The learning curve of the most recent evolve run: per-round classifier
+    metrics, attack outcomes, bait FPs, gate decisions."""
+    entries = _jsonl("evolution.jsonl")
+    if entries:
+        last = entries[-1].get("run_id")
+        entries = [e for e in entries if e.get("run_id") == last]
     return JSONResponse(entries)
+
+
+@app.get("/api/frontier")
+def api_frontier() -> JSONResponse:
+    """Points from the most recent frontier search (configs nobody authored)."""
+    runs = _jsonl("frontier.jsonl")
+    return JSONResponse(runs[-1] if runs else {"points": []})
 
 
 @app.get("/api/feed")
@@ -59,7 +74,7 @@ async def api_feed() -> StreamingResponse:
     """SSE stream: emits current summary every 2s so the page live-updates."""
     async def gen():
         while True:
-            rows = read_rows(_cfg.paths.results_file())
+            rows = read_rows(_cfg.paths.results_file(), include_all=_MOCK)
             s = summary(rows)
             yield f"data: {json.dumps(s)}\n\n"
             await asyncio.sleep(2)
@@ -95,7 +110,10 @@ async def api_theater_start(request: Request) -> JSONResponse:
     mode = body.get("mode", "live")
     if mode not in ("live", "mock"):
         mode = "live"
-    return JSONResponse(theater.controller.start(rounds=rounds, mode=mode))
+    kind = body.get("kind", "evolve")
+    if kind not in ("evolve", "frontier"):
+        kind = "evolve"
+    return JSONResponse(theater.controller.start(rounds=rounds, mode=mode, kind=kind))
 
 
 @app.post("/api/theater/stop")
@@ -174,14 +192,15 @@ def index() -> HTMLResponse:
 </style></head><body>
 <h1>TOLLGATE <span style="color:#7f95bd">// agent security release gate</span></h1>
 <div class="sub">break &rarr; patch &rarr; price &rarr; ship or revert. Verdicts from tool logs, never opinions.</div>
+__MOCK_BANNER__
 <div class="grid">
-  <div class="kpi"><div class="v" id="k-asr">-</div><div class="l">ATTACK SUCCESS RATE</div></div>
-  <div class="kpi"><div class="v good" id="k-tcr">-</div><div class="l">HONEST WORK COMPLETED</div></div>
-  <div class="kpi"><div class="v bad" id="k-toll">-</div><div class="l">THE TOLL (work lost, pts)</div></div>
-  <div class="kpi"><div class="v" id="k-runs">-</div><div class="l">MEASURED RUNS</div></div>
+  <div class="kpi"><div class="v bad" id="k-asr">-</div><div class="l">ATTACK SUCCESS, NO DEFENCES</div></div>
+  <div class="kpi"><div class="v good" id="k-tcr">-</div><div class="l" id="k-tcr-l">HONEST WORK, BEST SECURE CONFIG</div></div>
+  <div class="kpi"><div class="v bad" id="k-toll">-</div><div class="l" id="k-toll-l">THE TOLL OF MAX SECURITY (pts)</div></div>
+  <div class="kpi"><div class="v" id="k-runs">-</div><div class="l" id="k-runs-l">MEASURED RUNS</div></div>
 </div>
 <div class="panels">
-  <div class="panel"><b>SECURITY &harr; UTILITY FRONTIER</b><canvas id="frontier"></canvas></div>
+  <div class="panel"><b>SECURITY &harr; UTILITY FRONTIER</b> <span style="color:#7f95bd;font-size:12px">blue = authored configs (sweep) &middot; green = found by search, gate accepted &middot; hollow red = search proposal the gate reverted</span><canvas id="frontier"></canvas></div>
   <div class="panel"><b>THE LEARNING CURVE <span style="color:#7f95bd;font-weight:400">(classifier, held-out numbers)</span></b><canvas id="learn"></canvas>
     <div id="learn-line" style="margin-top:6px;color:#7f95bd;font-size:12px"></div></div>
 </div>
@@ -193,44 +212,69 @@ def index() -> HTMLResponse:
 <div class="demo"><a href="/theater">&#9654; OPEN THE LIVE THEATER</a> <span style="color:#7f95bd">- start the loop from the browser and watch it break, learn, and gate</span></div>
 <script>__CHART_JS__</script>
 <script>
+const $ = id => document.getElementById(id);
 async function refresh() {
   const s = await (await fetch('/api/summary')).json();
-  kAsr.textContent = s.asr_overall + '%'; kAsr.className = 'v ' + (s.asr_overall>20?'bad':'');
-  kTcr.textContent = s.tcr_all + '%';
-  const toll = Math.max(0, 100 - s.tcr_all);
-  kToll.textContent = toll.toFixed(1); kRuns.textContent = s.runs;
-  drawFrontier(s.frontier || []);
-  document.getElementById('toll-line').textContent =
+  const found = await (await fetch('/api/frontier')).json();
+  const pts = s.frontier || [];
+  // KPIs compare configs, never an average across them (that number means nothing)
+  const base = pts.find(p => p.label === 'cfg-baseline' || p.label === 'no defences');
+  if (base) {
+    $('k-asr').textContent = (100 - base.attacks_blocked).toFixed(1) + '%';
+    const maxBlocked = Math.max(...pts.map(p => p.attacks_blocked));
+    const secure = pts.filter(p => p.attacks_blocked === maxBlocked);
+    const best = secure.reduce((a, b) => b.tasks_completed > a.tasks_completed ? b : a);
+    const worst = secure.reduce((a, b) => b.tasks_completed < a.tasks_completed ? b : a);
+    $('k-tcr').textContent = best.tasks_completed + '%';
+    $('k-tcr-l').textContent = 'HONEST WORK AT ' + maxBlocked + '% BLOCKED (' + best.label + ')';
+    $('k-toll').textContent = (base.tasks_completed - worst.tasks_completed).toFixed(1);
+    $('k-toll-l').textContent = 'THE TOLL OF ' + worst.label + ' (pts of honest work)';
+  } else {
+    $('k-asr').textContent = s.runs ? s.asr_overall + '%' : '-';
+    $('k-tcr').textContent = s.runs ? s.tcr_all + '%' : '-';
+  }
+  $('k-runs').textContent = s.runs;
+  $('k-runs-l').textContent = 'MEASURED RUNS' + (s.models ? ' (' + Object.keys(s.models).join(', ') + ')' : '');
+  drawFrontier(pts, found.points || []);
+  $('toll-line').textContent =
     'B1 ordinary: ' + s.tcr_ordinary_b1 + '%  |  B2 lookalike: ' + s.tcr_lookalike_b2 +
-    '%  |  false alarms: ' + s.false_alarms;
+    '%  |  false alarms (guard fired): ' + s.false_alarms + '  |  model misses: ' + (s.model_misses ?? 0);
 }
 let chart, learnChart;
 async function loadEvolution() {
   const ev = await (await fetch('/api/evolution')).json();
   if (!ev.length) return;
   const rounds = ev.map(e => 'R' + e.round);
-  const acc = ev.map(e => (e.classifier && e.classifier.holdout_accuracy) ?? null);
-  const f1 = ev.map(e => (e.classifier && e.classifier.holdout_f1) ?? null);
+  const c = e => e.classifier || {};
+  const acc = ev.map(e => c(e).holdout_accuracy ?? null);
+  const maj = ev.map(e => c(e).majority_baseline_acc ?? null);
+  const rec = ev.map(e => c(e).malicious_recall ?? null);
   const fp = ev.map(e => e.bait_fp ?? 0);
   const ctx = document.getElementById('learn');
   if (window.Chart) {
+    // accuracy is only meaningful next to the majority-class rate it must beat
     const data = { labels: rounds, datasets: [
       { label: 'holdout accuracy', data: acc, borderColor:'#5df2a6', backgroundColor:'#5df2a6', tension:0.3 },
-      { label: 'holdout F1', data: f1, borderColor:'#5b8cff', backgroundColor:'#5b8cff', tension:0.3 },
+      { label: 'majority-class baseline', data: maj, borderColor:'#7f95bd', backgroundColor:'#7f95bd', borderDash:[5,4], tension:0 },
+      { label: 'malicious recall', data: rec, borderColor:'#5b8cff', backgroundColor:'#5b8cff', tension:0.3 },
       { label: 'bait false alarms', data: fp, borderColor:'#ff6b81', backgroundColor:'#ff6b81', tension:0.3 } ]};
     if (learnChart) { learnChart.data = data; learnChart.update(); }
     else learnChart = new Chart(ctx, { type:'line', data,
       options:{ animation:false, scales:{ y:{ min:0, max:1 } }, plugins:{legend:{labels:{color:'#7f95bd', boxWidth:10}}} } });
   }
   const last = ev[ev.length - 1];
+  const lc = last.classifier || {};
   document.getElementById('learn-line').textContent =
-    'mode: ' + (last.classifier ? last.classifier.mode : '?') +
-    ' | novel-attack recall (held-out): ' + ((last.classifier && last.classifier.novel_recall_holdout) ?? 'n/a');
+    'mode: ' + (lc.mode || '?') + ' | ' + (lc.n_malicious ?? 0) + ' attacks / ' + (lc.n_evidence ?? 0) +
+    ' examples | held-out acc ' + (lc.holdout_accuracy ?? 'n/a') + ' vs majority ' +
+    (lc.majority_baseline_acc ?? 'n/a') + ' | gate kept ' + ev.filter(e => e.accepted).length +
+    ' of ' + ev.length + ' retrains';
   const rt = document.getElementById('rtfeed'); rt.innerHTML = '';
   for (const e of ev) {
     const div = document.createElement('div');
     div.className = 'row ' + (e.verdict === 'succeeded' ? 'rej' : '');
-    div.textContent = 'R' + e.round + ' [' + e.verdict + '] ' + (e.attack || '').slice(0, 110);
+    const gate = e.accepted === undefined ? '' : (e.accepted ? ' -> gate ACCEPTED' : ' -> gate REVERTED');
+    div.textContent = 'R' + e.round + ' [' + e.verdict + gate + '] ' + (e.attack || '').slice(0, 110);
     rt.appendChild(div);
     if (e.verdict === 'succeeded') {
       const h = document.createElement('div');
@@ -240,35 +284,62 @@ async function loadEvolution() {
     }
   }
 }
-function drawFrontier(pts) {
+function drawFrontier(pts, found) {
   const ctx = document.getElementById('frontier');
-  if (!window.Chart || !pts.length) return;
-  const data = { datasets: [{ label: 'defence configs', data: pts.map(p => ({x:p.attacks_blocked, y:p.tasks_completed})),
-    backgroundColor:'#5b8cff', pointRadius:6 }] };
+  if (!window.Chart || (!pts.length && !found.length)) return;
+  const xy = p => ({x: p.attacks_blocked, y: p.tasks_completed, label: p.label || p.config_id});
+  const data = { datasets: [
+    { label: 'authored configs', data: pts.map(xy), backgroundColor:'#5b8cff', pointRadius:7 },
+    { label: 'search: accepted', data: found.filter(p => p.accepted).map(xy),
+      backgroundColor:'#5df2a6', pointRadius: 7, pointStyle:'rectRot' },
+    { label: 'search: reverted', data: found.filter(p => !p.accepted).map(xy),
+      backgroundColor:'rgba(0,0,0,0)', borderColor:'#ff6b81', borderWidth:2, pointRadius:6 } ] };
   if (chart) { chart.data = data; chart.update(); return; }
   chart = new Chart(ctx, { type:'scatter', data,
     options:{ animation:false, scales:{ x:{title:{display:true,text:'attacks blocked %'}, min:0, max:100},
                                     y:{title:{display:true,text:'honest work completed %'}, min:0, max:100} },
-              plugins:{legend:{display:false}} } });
+              plugins:{ legend:{labels:{color:'#7f95bd', boxWidth:10}},
+                        tooltip:{callbacks:{label: c => c.raw.label + ': ' + c.raw.x + '% blocked, ' + c.raw.y + '% work'}} } } });
 }
 async function loadLoop() {
-  const entries = await (await fetch('/api/loop')).json();
-  if (!entries.length) return;
+  // loop.jsonl holds one object per immune run, each with a timeline of rounds
+  // (v1 iterated the runs as if they were rounds, so this feed stayed empty)
+  const runs = await (await fetch('/api/loop')).json();
+  if (!runs.length) return;
   const feed = document.getElementById('feed'); feed.innerHTML = '';
-  for (const e of entries) for (const a of (e.attempts||[])) {
-    const div = document.createElement('div');
-    if (a.verdict === 'succeeded') {
-      const acc = a.accepted;
-      div.className = 'row ' + (acc ? 'ok' : 'rej');
-      div.textContent = 'round ' + e.round + ' ' + e.seed + ' BROKE IN -> patch [' +
-        Object.keys(a.patch||{}).join(',') + '] -> gate ' + (acc ? 'ACCEPTED' : 'REVERTED');
-    } else { div.className='row'; div.textContent='round ' + e.round + ' ' + e.seed + ' blocked'; }
-    feed.appendChild(div);
+  for (const run of runs.slice(-2).reverse()) {
+    const hd = document.createElement('div');
+    hd.className = 'row gate';
+    hd.textContent = 'immune loop, ' + (run.mode || '?') + ' patches';
+    feed.appendChild(hd);
+    for (const e of (run.timeline || [])) {
+      const tries = e.attempts || [];
+      const breaks = tries.filter(a => a.verdict === 'succeeded');
+      if (!breaks.length) {
+        const div = document.createElement('div');
+        div.className = 'row';
+        div.textContent = 'round ' + e.round + ' ' + e.seed + ' held: ' + tries.length + ' attempts, no break-in';
+        feed.appendChild(div);
+      }
+      for (const a of breaks) {
+        const n = (a.gate || {}).numbers || {};
+        const div = document.createElement('div');
+        div.className = 'row ' + (a.accepted ? 'ok' : 'rej');
+        div.textContent = 'round ' + e.round + ' ' + e.seed + ' BROKE IN -> patch [' +
+          Object.keys(a.patch||{}).join(',') + '] -> gate ' + (a.accepted ? 'ACCEPTED' : 'REVERTED') +
+          '  (ASR ' + n.asr_before + '->' + n.asr_after + ', Toll ' + n.toll_total + ' pts)';
+        feed.appendChild(div);
+      }
+    }
   }
 }
 refresh(); loadLoop(); loadEvolution(); setInterval(refresh, 3000); setInterval(loadEvolution, 5000);
 </script></body></html>"""
-    return HTMLResponse(html.replace("__CHART_JS__", chart_js))
+    banner = ('<div style="background:#3a2a0a;border:1px solid #ffd166;color:#ffd166;'
+              'padding:8px 12px;border-radius:8px;margin-bottom:14px">REHEARSAL DATA: offline '
+              'mock model (results/mock/). These numbers show the mechanics, not findings.</div>'
+              if _MOCK else "")
+    return HTMLResponse(html.replace("__CHART_JS__", chart_js).replace("__MOCK_BANNER__", banner))
 
 
 THEATER_HTML = """<!doctype html>
@@ -311,8 +382,9 @@ THEATER_HTML = """<!doctype html>
 <div class="sub">attack &rarr; detect &rarr; patch &rarr; price &rarr; ship or revert. Every verdict comes from tool logs, never opinions.</div>
 <div class="bar">
   <button id="start">&#9654; START LIVE RUN</button>
-  <select id="rounds"><option>1</option><option>2</option><option selected>3</option><option>5</option></select>
-  <span class="mode">rounds</span>
+  <select id="kind"><option value="evolve" selected>self-learning loop</option><option value="frontier">frontier search</option></select>
+  <select id="rounds"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>8</option></select>
+  <span class="mode">rounds / proposals</span>
   <button id="mock" class="ghost">offline rehearsal</button>
   <button id="stop" class="ghost" disabled>stop</button>
   <span class="mode" id="status">idle</span>
@@ -381,15 +453,21 @@ function handle(ev) {
   if (ev.kind === 'verdict') {
     if (ev.false_alarm) {
       k.fa++;
-      line('&#128680; <span class="fa">FALSE ALARM</span> honest task ' + esc(ev.test_id) + ' rejected: ' + esc(ev.answer).slice(0, 140), 'big');
+      line('&#128680; <span class="fa">FALSE ALARM</span> a defence blocked honest task ' + esc(ev.test_id) + ': ' + esc(ev.answer).slice(0, 140), 'big');
     } else if (ev.completed) {
       k.honest++;
       line('&#9989; <span class="done">honest task done</span> ' + esc(ev.test_id));
     } else {
-      k.fa++;
-      line('&#10060; <span class="fa">honest task failed</span> ' + esc(ev.test_id) + ': ' + esc(ev.answer).slice(0, 140));
+      // no guard fired: the model got it wrong on its own. Not a false alarm.
+      line('&#10060; <span class="warn">honest task missed (no guard involved)</span> ' + esc(ev.test_id) + ': ' + esc(ev.answer).slice(0, 140));
     }
     updateK(); return;
+  }
+  if (ev.kind === 'frontier') {
+    const p = JSON.stringify(ev.patch || {});
+    line('&#128269; proposal ' + ev.proposal + ': ' + esc(p).slice(0, 140) + ' &rarr; ' +
+         ev.attacks_blocked + '% blocked, ' + ev.tasks_completed + '% honest work', 'learn');
+    return;
   }
   if (ev.kind === 'bait') {
     const probes = ev.probes || [];
@@ -399,13 +477,17 @@ function handle(ev) {
   }
   if (ev.kind === 'learn') {
     const m = ev.metrics || {};
-    line('&#129504; classifier retrained: mode=' + esc(m.mode) + ' holdout acc=' + (m.holdout_accuracy ?? 'n/a') + ' f1=' + (m.holdout_f1 ?? 'n/a'), 'learn');
+    line('&#129504; candidate classifier retrained: mode=' + esc(m.mode) + ' holdout acc=' + (m.holdout_accuracy ?? 'n/a') +
+         ' (majority baseline ' + (m.majority_baseline_acc ?? 'n/a') + ') malicious recall=' + (m.malicious_recall ?? 'n/a') +
+         ', ' + (m.n_malicious ?? 0) + ' attacks / ' + (m.n_evidence ?? 0) + ' examples', 'learn');
     return;
   }
   if (ev.kind === 'gate') {
+    const n = ev.numbers || {};
     if (ev.accepted) {
       k.acc++;
-      line('&#9989;&#9989; <span class="gate-ok">GATE: PATCH ACCEPTED</span> toll=' + ((ev.numbers || {}).toll_total ?? '?') + ' pts', 'big');
+      line('&#9989;&#9989; <span class="gate-ok">GATE: PATCH ACCEPTED</span> ASR ' + n.asr_before + '&rarr;' + n.asr_after +
+           ', honest work ' + n.tcr_baseline + '&rarr;' + n.tcr_after + ', toll=' + (n.toll_total ?? '?') + ' pts', 'big');
     } else {
       k.rev++;
       line('&#128148; <span class="gate-no">GATE: PATCH REVERTED</span> ' + esc((ev.failed || []).join(' | ')), 'big');
@@ -425,7 +507,8 @@ es.onmessage = function(m) { try { handle(JSON.parse(m.data)); } catch(e) {} };
 async function start(mode) {
   const r = await (await fetch('/api/theater/start', {method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({rounds: +document.getElementById('rounds').value, mode})})).json();
+    body: JSON.stringify({rounds: +document.getElementById('rounds').value, mode,
+                          kind: document.getElementById('kind').value})})).json();
   if (!r.ok) alert(r.error || 'cannot start');
 }
 document.getElementById('start').onclick = function() { start('live'); };

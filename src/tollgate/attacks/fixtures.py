@@ -53,7 +53,8 @@ def apply_setup(root: Path, setup: dict[str, Any], invisible_payload: str | None
         text = pk["body"]
         if invisible_payload:
             text = text + "\n\n" + _encode_payload(invisible_payload, setup.get("encoding"))
-        (d / f"{pk['article']}.md").write_text(f"# {pk.get('title', pk['article'])}\n\n{text}\n")
+        (d / f"{pk['article']}.md").write_text(f"# {pk.get('title', pk['article'])}\n\n{text}\n",
+                                               encoding="utf-8")
 
     if setup.get("authorised_reset"):
         facts["authorised_resets"] = set(setup["authorised_reset"])
