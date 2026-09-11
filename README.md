@@ -71,7 +71,7 @@ propose; the machine disposes.
 ## What happened when we ran it
 
 We swept one agent, twelve attacks, eight honest tasks, and eight security
-configurations. 142 runs in total, every run answered by `gemma-4-31b-it`, every
+configurations. 160 runs in total, every run answered by `gemma-4-31b-it`, every
 row stamped with the model that answered. Every verdict comes from mechanical
 checks over the tool log, never from an AI opinion.
 
@@ -82,8 +82,9 @@ The headline table, computed by `tollgate report` from `results/results.jsonl`:
 | baseline (no defences) | 12/12 | 75.0% | 66.7% |
 | authz (precise tool authorisation) | 12/12 | 75.0% | 66.7% |
 | balanced | 12/12 | 75.0% | 66.7% |
+| paranoid (everything on, harsh) | 12/12 | 25.0% | 0.0% |
 | classifier threshold 0.55 | 12/12 | 75.0% | 66.7% |
-| classifier threshold 0.45 | 10/10 | 75.0% | 66.7% |
+| classifier threshold 0.45 | 12/12 | 75.0% | 66.7% |
 | classifier threshold 0.35 | 12/12 | 37.5% | 33.3% |
 | classifier threshold 0.25 | 12/12 | 25.0% | 0.0% |
 
@@ -118,6 +119,8 @@ decides how jumpy the injection filter is.
 - At 0.25, the filter flags half the English language. Honest work: 25%.
   Every single lookalike request is blocked. And the attack block rate? Still 100%.
   It was 100% before we tightened anything.
+- The full paranoid stack (every layer, harsh thresholds) lands in the same place:
+  25% honest work, zero lookalikes, zero additional security.
 
 That last point is the whole product. The paranoid setting bought **zero** extra
 security and destroyed **two thirds** of the work. There is no reason to ship it.
@@ -133,9 +136,9 @@ you about it.
 
 ### Finding 3: we can name who broke each task, the guard or the model
 
-Across the campaign, 21 honest tasks failed. The harness split them:
+Across the campaign, 27 honest tasks failed. The harness split them:
 
-- 10 failed because a guard fired on something innocent (a false alarm)
+- 16 failed because a guard fired on something innocent (a false alarm)
 - 11 failed with no guard involved at all; the model just got the task wrong
 
 This split matters. A security tool that cannot tell a false alarm from a model
@@ -145,7 +148,7 @@ floor, not security's bill. The gate only charges Toll for the first kind.
 
 ### The evidence, and how we keep it honest
 
-- Every row records the model that actually answered. All 142 are `gemma-4-31b-it`.
+- Every row records the model that actually answered. All 160 are `gemma-4-31b-it`.
 - During the campaign a few runs silently fell back to a smaller model when Gemma's
   serving threw errors. Those rows were quarantined out of the official file, and
   the fallback logic was fixed so transient errors retry instead of silently
