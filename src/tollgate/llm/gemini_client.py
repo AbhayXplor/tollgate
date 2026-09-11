@@ -1,8 +1,10 @@
 """Gemini client implementing LLMClient via google-genai (verified against SDK 2.22).
 
 - Model candidates come from config (Gemma 4 preferred, flash-lite fallbacks).
-- Persistent model-level errors (404/500) trigger fallback to the next candidate.
-- 429/503 are retried with tenacity.
+- Persistent model-level errors (404) or 500s that survive retries trigger
+  fallback to the next candidate.
+- 429/500/503 are retried with tenacity first, so a transient blip never
+  permanently downgrades the evidence to the fallback model.
 - Tracks token usage and projects cost against the configured spend cap.
 """
 from __future__ import annotations
@@ -17,6 +19,7 @@ from .base import LLMResponse, ToolCallRequest
 
 RETRYABLE_429 = retry_if_exception_message(match="429")
 RETRYABLE_503 = retry_if_exception_message(match="503|UNAVAILABLE|overloaded")
+RETRYABLE_500 = retry_if_exception_message(match="500|INTERNAL|internal error|Bad gateway|truncated")
 
 
 class BudgetExceeded(RuntimeError):
@@ -36,6 +39,7 @@ class GeminiClient:
         self.max_output_tokens = cfg.models.generation.max_output_tokens
         self.usage_in = 0
         self.usage_out = 0
+        self._server_errors = 0
         self.max_usd = cfg.budget.max_usd
         self.price_in = cfg.pricing_per_mtok.input / 1_000_000
         self.price_out = cfg.pricing_per_mtok.output / 1_000_000
@@ -61,7 +65,7 @@ class GeminiClient:
             raise exc
 
     @retry(
-        retry=(RETRYABLE_429 | RETRYABLE_503),
+        retry=(RETRYABLE_429 | RETRYABLE_503 | RETRYABLE_500),
         wait=wait_exponential(multiplier=2, min=2, max=60),
         stop=stop_after_attempt(6),
         reraise=True,
@@ -142,18 +146,27 @@ class GeminiClient:
             ),
         )
 
-        attempt = 0
         while True:
-            attempt += 1
             try:
                 raw = self._call(kwargs)
+                self._server_errors = 0
                 break
             except Exception as exc:  # noqa: BLE001
                 text = str(exc)
-                if any(code in text for code in ("404", "500", "NOT_FOUND", "INTERNAL")) and attempt < 3:
+                # after retries, only a 404 (model truly absent) or a 500 that
+                # survived them justifies permanent rotation; the 500 case can
+                # still mean provider trouble, so it rotates only after 2 hits
+                if any(code in text for code in ("404", "NOT_FOUND")):
                     self._fallback(exc)
                     kwargs["model"] = self.model
                     continue
+                if "500" in text or "INTERNAL" in text:
+                    self._server_errors += 1
+                    if self._server_errors >= 2:
+                        self._server_errors = 0
+                        self._fallback(exc)
+                        kwargs["model"] = self.model
+                        continue
                 raise
 
         usage = getattr(raw, "usage_metadata", None)
