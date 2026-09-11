@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   OrinSimulator,
   ChatMessage,
   DefensesConfig,
   DEFAULT_DEFENSES,
   PRESET_PROMPTS,
+  ToolCall,
 } from "@/lib/orin-engine";
 import { TollMeter } from "./TollMeter";
+import { StatusPill, StatusTone } from "./StatusPill";
 import {
-  Send,
+  ArrowUp,
   RotateCcw,
   Shield,
   Wrench,
@@ -18,9 +20,7 @@ import {
   XCircle,
   AlertOctagon,
   Bot,
-  User,
-  Sliders,
-  Sparkles,
+  ChevronRight,
 } from "lucide-react";
 
 interface ChatPanelProps {
@@ -28,25 +28,153 @@ interface ChatPanelProps {
   showSidebarControls?: boolean;
 }
 
+const shortTime = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+const GREETING =
+  "Hello! I am **Orin**, Northwind Systems IT Helpdesk AI. I can assist with employee directory queries, credentials reset, and ticket triage.";
+
+const SCENARIO_DOT: Record<string, string> = {
+  honest: "#34c759",
+  lookalike: "#ff9500",
+  attack: "#ff3b30",
+  direct_attack: "#ff3b30",
+};
+
+const DEFENSE_ROWS: {
+  key: keyof DefensesConfig;
+  code: string;
+  name: string;
+  description: string;
+  highToll?: boolean;
+}[] = [
+  { key: "d1_canary", code: "D1", name: "Canary Leak Oracle", description: "Inspects outputs for token leaks" },
+  { key: "d6_sandbox", code: "D6", name: "Tool Sandboxing", description: "Restricts external exfiltration domains" },
+  { key: "d2_classifier", code: "D2", name: "Minimal Input Classifier", description: "Catches explicit injection keywords" },
+  {
+    key: "d2_aggressive",
+    code: "D2",
+    name: "Aggressive (Fable Mode)",
+    description: "Broad refusal of benign security words",
+    highToll: true,
+  },
+  { key: "d3_pii_mask", code: "D3", name: "PII & Credential Scrubbing", description: "Redacts passwords & sensitive fields" },
+  { key: "d5_approval", code: "D5", name: "Human Approval Gate", description: "Requires manual confirmation" },
+];
+
+/** Renders the engine's **bold** markers as real emphasis. */
+const RichText: React.FC<{ text: string }> = ({ text }) => (
+  <>
+    {text.split("**").map((part, i) =>
+      i % 2 === 1 ? (
+        <strong key={i} className="font-semibold">
+          {part}
+        </strong>
+      ) : (
+        <React.Fragment key={i}>{part}</React.Fragment>
+      )
+    )}
+  </>
+);
+
+const formatArgs = (args: Record<string, unknown>) =>
+  Object.entries(args)
+    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+    .join(", ");
+
+const TOOL_STATUS_TONE: Record<ToolCall["status"], StatusTone> = {
+  completed: "green",
+  allowed: "green",
+  executing: "neutral",
+  blocked: "red",
+};
+
+const VERDICTS: Record<string, { tone: StatusTone; label: string; Icon: typeof CheckCircle2 }> = {
+  breach: { tone: "red", label: "BREACH DETECTED", Icon: AlertOctagon },
+  false_alarm: { tone: "amber", label: "FALSE ALARM (FABLE DILEMMA)", Icon: XCircle },
+  blocked_attack: { tone: "green", label: "ATTACK BLOCKED", Icon: CheckCircle2 },
+};
+
+/** Xcode-style collapsible execution trace. */
+const ToolTrace: React.FC<{ calls: ToolCall[]; open: boolean; onToggle: () => void }> = ({ calls, open, onToggle }) => {
+  const blocked = calls.filter((c) => c.status === "blocked").length;
+  return (
+    <div className="rounded-xl border border-black/[0.06] bg-apple-subtle overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-apple-secondary hover:bg-black/[0.03] transition-colors"
+      >
+        <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
+        <Wrench className="w-3.5 h-3.5 text-apple-muted" />
+        <span className="font-medium text-apple-text">Execution trace</span>
+        <span className="text-apple-muted">
+          {calls.length} tool {calls.length === 1 ? "call" : "calls"}
+        </span>
+        {blocked > 0 && <span className="ml-auto font-medium text-[#d70015]">{blocked} blocked</span>}
+      </button>
+      {open && (
+        <ol className="border-t border-black/[0.06] divide-y divide-black/[0.05] bg-white/60">
+          {calls.map((tc) => (
+            <li key={tc.id} className="px-3 py-2.5 space-y-1">
+              <div className="flex items-start justify-between gap-3">
+                <code className="font-mono text-[11px] leading-relaxed text-apple-text break-all">
+                  <span className="text-apple-faint select-none">{tc.step} </span>
+                  <span className="font-semibold text-[#4240b8]">{tc.name}</span>
+                  <span className="text-apple-muted">(</span>
+                  {formatArgs(tc.arguments)}
+                  <span className="text-apple-muted">)</span>
+                </code>
+                <StatusPill tone={TOOL_STATUS_TONE[tc.status]} size="sm" className="shrink-0 mt-0.5">
+                  {tc.status}
+                </StatusPill>
+              </div>
+              {tc.result && (
+                <p className="font-mono text-[11px] leading-relaxed text-apple-muted break-all line-clamp-3" title={tc.result}>
+                  &rarr; {tc.result}
+                </p>
+              )}
+              {tc.blockedBy && (
+                <p className="text-[12px] leading-snug font-medium text-[#d70015] flex items-start gap-1">
+                  <XCircle className="w-3.5 h-3.5 mt-px shrink-0" />
+                  {tc.blockedBy}
+                </p>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+};
+
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   initialPrompt = "",
   showSidebarControls = true,
 }) => {
   const [defenses, setDefenses] = useState<DefensesConfig>(DEFAULT_DEFENSES);
   const [simulator] = useState(() => new OrinSimulator(DEFAULT_DEFENSES));
+  // The greeting's timestamp starts as a stable placeholder so server and client render the
+  // same markup; the real clock time is filled in after hydration.
   const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "init",
-      role: "assistant",
-      content:
-        "Hello! I am **Orin**, Northwind Systems IT Helpdesk AI. I can assist with employee directory queries, credentials reset, and ticket triage.",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    },
+    { id: "init", role: "assistant", content: GREETING, timestamp: "Ready" },
   ]);
   const [input, setInput] = useState(initialPrompt);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [collapsedTraces, setCollapsedTraces] = useState<Record<string, boolean>>({});
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Update simulator when defenses state changes
+  useEffect(() => {
+    const time = shortTime();
+    setMessages((prev) => prev.map((m) => (m.id === "init" && m.timestamp === "Ready" ? { ...m, timestamp: time } : m)));
+  }, []);
+
+  // Keep the newest message in view without scrolling the page itself.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages, isProcessing]);
+
   const toggleDefense = (key: keyof DefensesConfig) => {
     const updated = { ...defenses, [key]: !defenses[key] };
     // If enabling d2_aggressive, also enable d2_classifier
@@ -64,8 +192,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     setIsProcessing(true);
     setInput("");
 
-    // Run step through simulator
-    const result = await simulator.runStep(text, (msg) => {
+    await simulator.runStep(text, (msg) => {
       setMessages((prev) => [...prev, msg]);
     });
 
@@ -73,13 +200,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   const handleReset = () => {
+    setCollapsedTraces({});
     setMessages([
       {
         id: "init",
         role: "assistant",
-        content:
-          "Reset complete. Orin IT Helpdesk ready. Current defenses updated.",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        content: "Reset complete. Orin IT Helpdesk ready. Current defenses updated.",
+        timestamp: shortTime(),
       },
     ]);
   };
@@ -88,189 +215,147 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   return (
     <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-      {/* Main Chat Interface */}
-      <div className={`cyber-panel rounded-xl flex flex-col h-[650px] border border-cyber-border overflow-hidden ${showSidebarControls ? "lg:col-span-8" : "lg:col-span-12"}`}>
-        {/* Chat Header */}
-        <div className="px-5 py-3.5 border-b border-cyber-border bg-cyber-surface/80 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-cyber-card border border-cyber-border flex items-center justify-center">
-              <Bot className="w-4 h-4 text-cyber-cyan" />
+      {/* Conversation */}
+      <div
+        className={`apple-card flex flex-col h-[680px] overflow-hidden ${
+          showSidebarControls ? "lg:col-span-8" : "lg:col-span-12"
+        }`}
+      >
+        {/* Header */}
+        <div className="px-5 py-3.5 border-b border-black/[0.06] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-b from-[#3d9bff] to-[#0071e3] flex items-center justify-center shrink-0">
+              <Bot className="w-5 h-5 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-sm text-cyber-text font-mono">
-                  ORIN // IT Helpdesk Agent
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyber-accent/20 text-cyber-accent border border-cyber-accent/40">
+                <span className="text-[15px] font-semibold tracking-[-0.01em] text-apple-text">Orin</span>
+                <span className="inline-flex items-center gap-1 text-[12px] font-medium text-[#248a3d]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#34c759]" />
                   Online
                 </span>
               </div>
-              <p className="text-[11px] text-cyber-dim font-mono">
-                Northwind Systems Internal Enterprise Support
+              <p className="text-[12px] text-apple-muted truncate">
+                IT Helpdesk Agent, Northwind Systems Internal Enterprise Support
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={handleReset}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-mono text-cyber-dim hover:text-cyber-text bg-cyber-card border border-cyber-border hover:border-cyber-borderGlow transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium text-apple-secondary hover:text-apple-text hover:bg-black/[0.04] transition-colors"
             title="Reset conversation"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset</span>
+            Reset
           </button>
         </div>
 
-        {/* Preset Prompt Buttons */}
-        <div className="px-4 py-2 bg-cyber-surface/40 border-b border-cyber-border/40 flex flex-wrap gap-2 text-xs font-mono">
-          <span className="text-cyber-muted text-[11px] flex items-center gap-1 mr-1">
-            <Sparkles className="w-3.5 h-3.5 text-cyber-accent" /> Demo Scenarios:
-          </span>
+        {/* Demo scenarios */}
+        <div className="px-4 py-2.5 border-b border-black/[0.06] bg-apple-bg flex flex-wrap items-center gap-2">
+          <span className="text-[12px] text-apple-muted shrink-0 pr-1">Demo scenarios</span>
           {PRESET_PROMPTS.map((p) => (
             <button
               key={p.id}
+              type="button"
               onClick={() => handleSend(p.prompt)}
-              className={`px-2.5 py-1 rounded border text-[11px] transition-all ${
-                p.type === "honest"
-                  ? "border-emerald-800/60 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/40"
-                  : p.type === "lookalike"
-                  ? "border-amber-800/60 bg-amber-950/30 text-amber-300 hover:bg-amber-900/40"
-                  : "border-rose-800/60 bg-rose-950/30 text-rose-300 hover:bg-rose-900/40"
-              }`}
+              disabled={isProcessing}
               title={p.description}
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/[0.08] text-[12px] font-medium text-apple-text hover:border-black/[0.18] hover:shadow-pill disabled:opacity-50 transition-all"
             >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: SCENARIO_DOT[p.type] }} />
               {p.label}
             </button>
           ))}
         </div>
 
-        {/* Messages Stream */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-4">
+        {/* Messages */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-5" aria-live="polite">
           {messages.map((m) => {
             const isUser = m.role === "user";
             const isGuard = m.role === "guard";
+            const verdict = m.verdict ? VERDICTS[m.verdict] : undefined;
+            const traceOpen = !collapsedTraces[m.id];
 
             return (
-              <div
-                key={m.id}
-                className={`flex gap-3 text-xs leading-relaxed font-sans ${
-                  isUser ? "justify-end" : "justify-start"
-                }`}
-              >
+              <div key={m.id} className={`flex gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}>
                 {!isUser && (
                   <div
-                    className={`w-7 h-7 rounded flex items-center justify-center shrink-0 mt-0.5 ${
-                      isGuard
-                        ? "bg-cyber-danger/20 border border-cyber-danger text-cyber-danger"
-                        : "bg-cyber-cyan/20 border border-cyber-cyan text-cyber-cyan"
+                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-5 ${
+                      isGuard ? "bg-[#ff3b30]/[0.1] text-[#d70015]" : "bg-apple-subtle text-apple-secondary"
                     }`}
                   >
                     {isGuard ? <Shield className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
                   </div>
                 )}
 
-                <div className={`max-w-[80%] space-y-2`}>
+                <div className={`max-w-[85%] sm:max-w-[78%] space-y-2 ${isUser ? "items-end" : ""}`}>
                   <div
-                    className={`p-3.5 rounded-xl border ${
-                      isUser
-                        ? "bg-cyber-card border-cyber-border text-cyber-text"
-                        : isGuard
-                        ? "bg-cyber-danger/10 border-cyber-danger/40 text-rose-200"
-                        : "bg-cyber-surface border-cyber-border text-cyber-text"
+                    className={`flex items-baseline gap-2 px-1 text-[11px] ${
+                      isUser ? "justify-end" : "justify-start"
                     }`}
                   >
-                    {/* Timestamp / Tag */}
-                    <div className="flex items-center justify-between text-[10px] font-mono text-cyber-muted mb-1">
-                      <span>{isUser ? "You" : isGuard ? "TOLLGATE GUARD" : "Orin"}</span>
-                      <span>{m.timestamp}</span>
-                    </div>
-
-                    {/* Content */}
-                    <div className="whitespace-pre-wrap">{m.content}</div>
-
-                    {/* Verdict Flag */}
-                    {m.verdict && (
-                      <div className="mt-2 pt-2 border-t border-cyber-border/40 flex items-center gap-2 font-mono text-[10px]">
-                        {m.verdict === "breach" && (
-                          <span className="text-cyber-danger font-bold flex items-center gap-1">
-                            <AlertOctagon className="w-3 h-3" /> VERDICT: BREACH DETECTED
-                          </span>
-                        )}
-                        {m.verdict === "false_alarm" && (
-                          <span className="text-cyber-warning font-bold flex items-center gap-1">
-                            <XCircle className="w-3 h-3" /> VERDICT: FALSE ALARM (FABLE DILEMMA)
-                          </span>
-                        )}
-                        {m.verdict === "blocked_attack" && (
-                          <span className="text-cyber-accent font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> VERDICT: ATTACK BLOCKED
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    <span className={`font-medium ${isGuard ? "text-[#d70015]" : "text-apple-secondary"}`}>
+                      {isUser ? "You" : isGuard ? "Tollgate Guard" : "Orin"}
+                    </span>
+                    <span className="text-apple-muted tabular-nums">{m.timestamp}</span>
                   </div>
 
-                  {/* Inline Tool Calls Timeline */}
-                  {m.toolCalls && m.toolCalls.length > 0 && (
-                    <div className="space-y-1.5 pl-2 border-l-2 border-cyber-border">
-                      <div className="text-[10px] font-mono text-cyber-dim flex items-center gap-1">
-                        <Wrench className="w-3 h-3 text-cyber-warning" />
-                        <span>Execution Trace ({m.toolCalls.length} tool calls):</span>
-                      </div>
-                      {m.toolCalls.map((tc) => (
-                        <div
-                          key={tc.id}
-                          className="p-2 rounded bg-cyber-card/90 border border-cyber-border/80 font-mono text-[11px] space-y-1"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-cyber-cyan font-bold">
-                              🔧 {tc.name}({JSON.stringify(tc.arguments)})
-                            </span>
-                            <span
-                              className={`text-[9px] uppercase px-1 rounded ${
-                                tc.status === "blocked"
-                                  ? "bg-cyber-danger/30 text-cyber-danger border border-cyber-danger/40"
-                                  : "bg-cyber-accent/20 text-cyber-accent"
-                              }`}
-                            >
-                              {tc.status}
-                            </span>
-                          </div>
-                          {tc.result && (
-                            <div className="text-[10px] text-cyber-dim truncate">
-                              &rarr; {tc.result}
-                            </div>
-                          )}
-                          {tc.blockedBy && (
-                            <div className="text-[10px] text-cyber-danger">
-                              &times; {tc.blockedBy}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                  <div
+                    className={`px-4 py-2.5 text-[14px] leading-relaxed whitespace-pre-wrap break-words ${
+                      isUser
+                        ? "bg-apple-blue text-white rounded-[20px] rounded-br-md"
+                        : isGuard
+                        ? "bg-[#ff3b30]/[0.08] border border-[#ff3b30]/20 text-[#d70015] rounded-[20px] rounded-bl-md"
+                        : "bg-apple-subtle text-apple-text rounded-[20px] rounded-bl-md"
+                    }`}
+                  >
+                    <RichText text={m.content} />
+                  </div>
+
+                  {verdict && (
+                    <div className="flex items-center gap-2 px-1">
+                      <span className="text-[11px] text-apple-muted">Verdict</span>
+                      <StatusPill tone={verdict.tone} size="sm" icon={<verdict.Icon className="w-3 h-3" />}>
+                        {verdict.label}
+                      </StatusPill>
                     </div>
                   )}
-                </div>
 
-                {isUser && (
-                  <div className="w-7 h-7 rounded bg-cyber-card border border-cyber-border flex items-center justify-center shrink-0 mt-0.5 text-cyber-dim">
-                    <User className="w-3.5 h-3.5" />
-                  </div>
-                )}
+                  {m.toolCalls && m.toolCalls.length > 0 && (
+                    <ToolTrace
+                      calls={m.toolCalls}
+                      open={traceOpen}
+                      onToggle={() => setCollapsedTraces((prev) => ({ ...prev, [m.id]: traceOpen }))}
+                    />
+                  )}
+                </div>
               </div>
             );
           })}
 
           {isProcessing && (
-            <div className="flex items-center gap-2 text-xs font-mono text-cyber-dim animate-pulse">
-              <Bot className="w-4 h-4 text-cyber-cyan animate-spin" />
-              <span>Orin is thinking and checking guard rules...</span>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-apple-subtle flex items-center justify-center shrink-0">
+                <Bot className="w-3.5 h-3.5 text-apple-secondary" />
+              </div>
+              <div className="flex items-center gap-1 px-4 py-3 rounded-[20px] rounded-bl-md bg-apple-subtle">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full bg-apple-faint animate-typing"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+              <span className="text-[12px] text-apple-muted">Orin is thinking and checking guard rules...</span>
             </div>
           )}
         </div>
 
-        {/* Input Bar */}
-        <div className="p-3 border-t border-cyber-border bg-cyber-surface/60">
+        {/* Composer */}
+        <div className="px-3 sm:px-4 py-3 border-t border-black/[0.06]">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -278,143 +363,99 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             }}
             className="flex items-center gap-2"
           >
+            <label htmlFor="orin-input" className="sr-only">
+              Message Orin
+            </label>
             <input
+              id="orin-input"
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask Orin to reset a password, read ticket TKT-9102, or test an injection..."
-              className="flex-1 bg-cyber-card border border-cyber-border focus:border-cyber-accent rounded-lg px-3.5 py-2 text-xs font-mono text-cyber-text placeholder:text-cyber-muted outline-none transition-colors"
+              className="flex-1 min-w-0 bg-white border border-black/[0.1] focus:border-apple-blue focus:ring-4 focus:ring-apple-blue/15 rounded-full px-4 py-2.5 text-[14px] text-apple-text placeholder:text-apple-faint outline-none transition-shadow"
             />
             <button
               type="submit"
               disabled={!input.trim() || isProcessing}
-              className="px-4 py-2 bg-cyber-accent text-cyber-bg font-bold font-mono text-xs rounded-lg hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all"
+              aria-label="Send"
+              className="w-10 h-10 shrink-0 rounded-full bg-apple-blue text-white flex items-center justify-center hover:bg-apple-blueHover disabled:bg-black/[0.08] disabled:text-apple-faint disabled:cursor-not-allowed transition-colors"
             >
-              <span>Send</span>
-              <Send className="w-3.5 h-3.5" />
+              <ArrowUp className="w-[18px] h-[18px]" strokeWidth={2.5} />
             </button>
           </form>
         </div>
       </div>
 
-      {/* Sidebar Controls & Toll Meter */}
+      {/* Sidebar: live Toll and the defense matrix */}
       {showSidebarControls && (
         <div className="lg:col-span-4 space-y-6">
-          {/* Real-time Toll Meter */}
           <TollMeter
             toll={parseFloat(metrics.toll)}
-            title="ACTIVE CONFIG TOLL"
+            title="Active config toll"
             subtitle="Calculated live from active defense parameters"
           />
 
-          {/* Defense Configuration Rack */}
-          <div className="cyber-panel p-5 rounded-xl border border-cyber-border space-y-4">
-            <div className="flex items-center justify-between border-b border-cyber-border pb-3">
-              <div className="flex items-center gap-2 font-mono text-xs font-bold text-cyber-text">
-                <Sliders className="w-4 h-4 text-cyber-accent" />
-                <span>DEFENSE MATRIX</span>
-              </div>
-              <span
-                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
-                  metrics.gateStatus === "ACCEPTED"
-                    ? "bg-cyber-accent/20 text-cyber-accent border border-cyber-accent/40"
-                    : "bg-cyber-danger/20 text-cyber-danger border border-cyber-danger/40"
-                }`}
-              >
-                GATE: {metrics.gateStatus}
-              </span>
+          <div className="apple-card overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3">
+              <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-apple-text">Defense matrix</h3>
+              <StatusPill tone={metrics.gateStatus === "ACCEPTED" ? "green" : "red"}>
+                GATE {metrics.gateStatus}
+              </StatusPill>
             </div>
 
-            <div className="space-y-2.5 font-mono text-xs">
-              {/* D1 Canary */}
-              <label className="flex items-center justify-between p-2 rounded bg-cyber-surface/60 border border-cyber-border/60 cursor-pointer hover:border-cyber-border">
-                <div>
-                  <div className="font-semibold text-cyber-text">D1: Canary Leak Oracle</div>
-                  <div className="text-[10px] text-cyber-muted">Inspects outputs for token leaks</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={defenses.d1_canary}
-                  onChange={() => toggleDefense("d1_canary")}
-                  className="rounded border-cyber-border text-cyber-accent focus:ring-0 cursor-pointer w-4 h-4"
-                />
-              </label>
+            <ul className="divide-y divide-black/[0.06] border-t border-black/[0.06]">
+              {DEFENSE_ROWS.map((row) => {
+                const on = defenses[row.key];
+                const danger = row.highToll && on;
+                const id = `defense-${row.key}`;
+                return (
+                  <li key={row.key} className={danger ? "bg-[#ff3b30]/[0.05]" : undefined}>
+                    <label htmlFor={id} className="flex items-center justify-between gap-4 px-5 py-3 cursor-pointer">
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`text-[11px] font-semibold px-1.5 py-px rounded-md tabular-nums ${
+                              danger ? "bg-[#ff3b30]/[0.12] text-[#d70015]" : "bg-black/[0.05] text-apple-secondary"
+                            }`}
+                          >
+                            {row.code}
+                          </span>
+                          <span
+                            className={`text-[14px] font-medium ${danger ? "text-[#d70015]" : "text-apple-text"}`}
+                          >
+                            {row.name}
+                          </span>
+                          {row.highToll && (
+                            <StatusPill tone="red" size="sm">
+                              High Toll
+                            </StatusPill>
+                          )}
+                        </span>
+                        <span className="block mt-0.5 text-[12px] text-apple-muted">{row.description}</span>
+                      </span>
 
-              {/* D6 Tool Sandbox */}
-              <label className="flex items-center justify-between p-2 rounded bg-cyber-surface/60 border border-cyber-border/60 cursor-pointer hover:border-cyber-border">
-                <div>
-                  <div className="font-semibold text-cyber-text">D6: Tool Sandboxing</div>
-                  <div className="text-[10px] text-cyber-muted">Restricts external exfiltration domains</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={defenses.d6_sandbox}
-                  onChange={() => toggleDefense("d6_sandbox")}
-                  className="rounded border-cyber-border text-cyber-accent focus:ring-0 cursor-pointer w-4 h-4"
-                />
-              </label>
-
-              {/* D2 Classifier */}
-              <label className="flex items-center justify-between p-2 rounded bg-cyber-surface/60 border border-cyber-border/60 cursor-pointer hover:border-cyber-border">
-                <div>
-                  <div className="font-semibold text-cyber-text">D2: Minimal Input Classifier</div>
-                  <div className="text-[10px] text-cyber-muted">Catches explicit injection keywords</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={defenses.d2_classifier}
-                  onChange={() => toggleDefense("d2_classifier")}
-                  className="rounded border-cyber-border text-cyber-accent focus:ring-0 cursor-pointer w-4 h-4"
-                />
-              </label>
-
-              {/* D2 Aggressive (The Fable Switch) */}
-              <label className="flex items-center justify-between p-2 rounded bg-cyber-danger/10 border border-cyber-danger/30 cursor-pointer hover:border-cyber-danger">
-                <div>
-                  <div className="font-semibold text-cyber-danger flex items-center gap-1.5">
-                    <span>D2-Aggressive (Fable Mode)</span>
-                    <span className="text-[9px] uppercase px-1 rounded bg-cyber-danger/20 text-cyber-danger">
-                      High Toll
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-rose-300/70">Broad refusal of benign security words</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={defenses.d2_aggressive}
-                  onChange={() => toggleDefense("d2_aggressive")}
-                  className="rounded border-cyber-danger text-cyber-danger focus:ring-0 cursor-pointer w-4 h-4"
-                />
-              </label>
-
-              {/* D3 PII Mask */}
-              <label className="flex items-center justify-between p-2 rounded bg-cyber-surface/60 border border-cyber-border/60 cursor-pointer hover:border-cyber-border">
-                <div>
-                  <div className="font-semibold text-cyber-text">D3: PII & Credential Scrubbing</div>
-                  <div className="text-[10px] text-cyber-muted">Redacts passwords & sensitive fields</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={defenses.d3_pii_mask}
-                  onChange={() => toggleDefense("d3_pii_mask")}
-                  className="rounded border-cyber-border text-cyber-accent focus:ring-0 cursor-pointer w-4 h-4"
-                />
-              </label>
-
-              {/* D5 Human Approval */}
-              <label className="flex items-center justify-between p-2 rounded bg-cyber-surface/60 border border-cyber-border/60 cursor-pointer hover:border-cyber-border">
-                <div>
-                  <div className="font-semibold text-cyber-text">D5: Human Approval Gate</div>
-                  <div className="text-[10px] text-cyber-muted">Requires manual confirmation</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={defenses.d5_approval}
-                  onChange={() => toggleDefense("d5_approval")}
-                  className="rounded border-cyber-border text-cyber-accent focus:ring-0 cursor-pointer w-4 h-4"
-                />
-              </label>
-            </div>
+                      {/* iOS switch */}
+                      <span className="relative inline-flex shrink-0">
+                        <input
+                          id={id}
+                          type="checkbox"
+                          role="switch"
+                          checked={on}
+                          onChange={() => toggleDefense(row.key)}
+                          className="peer sr-only"
+                        />
+                        <span
+                          className={`block w-[44px] h-[26px] rounded-full bg-[#e5e5ea] transition-colors duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-apple-blue peer-focus-visible:ring-offset-2 ${
+                            row.highToll ? "peer-checked:bg-[#ff3b30]" : "peer-checked:bg-[#34c759]"
+                          }`}
+                        />
+                        <span className="absolute top-[2px] left-[2px] w-[22px] h-[22px] rounded-full bg-white shadow-thumb transition-transform duration-200 peer-checked:translate-x-[18px]" />
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </div>
       )}

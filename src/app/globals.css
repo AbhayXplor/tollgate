@@ -3,90 +3,79 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
-  --bg-cyber: #070b14;
-  --card-cyber: #0b1220;
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background-color: var(--bg-cyber);
-  color: #f1f5f9;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #fbfbfd;
+  color: #1d1d1f;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui,
+    sans-serif;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   overflow-x: hidden;
 }
 
-/* Custom scrollbars */
+::selection {
+  background: rgba(0, 113, 227, 0.18);
+}
+
+/* One keyboard focus treatment for every control that doesn't define its own. */
+:focus-visible {
+  outline: 2px solid #0071e3;
+  outline-offset: 2px;
+}
+
+/* Quiet light scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #070b14;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.14);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: rgba(0, 0, 0, 0.26);
+  background-clip: content-box;
 }
 
-/* Glassmorphic Cyber Panels */
-.cyber-panel {
-  background: rgba(11, 18, 32, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(30, 44, 79, 0.7);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+@layer components {
+  /* Apple frosted glass */
+  .apple-glass {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.07);
+  }
+
+  /* Apple card panel */
+  .apple-card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.035), 0 1px 2px rgba(0, 0, 0, 0.02);
+    border-radius: 18px;
+  }
 }
 
-.cyber-panel-glow {
-  background: rgba(11, 18, 32, 0.9);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  box-shadow: 0 0 25px rgba(16, 185, 129, 0.15);
-}
-
-.cyber-panel-danger {
-  background: rgba(11, 18, 32, 0.9);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  box-shadow: 0 0 25px rgba(239, 68, 68, 0.15);
-}
-
-/* Glowing text and borders */
-.glow-emerald {
-  text-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
-}
-.glow-ruby {
-  text-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
-}
-.glow-amber {
-  text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
-}
-.glow-cyan {
-  text-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
-}
-
-/* Subtle grid backdrop */
-.cyber-grid-bg {
-  background-image:
-    linear-gradient(to right, rgba(30, 44, 79, 0.15) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(30, 44, 79, 0.15) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-/* Scanline effect */
-.scanline-overlay {
-  position: relative;
-}
-.scanline-overlay::before {
-  content: " ";
-  display: block;
-  position: absolute;
-  top: 0; left: 0; bottom: 0; right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-  z-index: 10;
-  background-size: 100% 2px, 3px 100%;
-  pointer-events: none;
-  opacity: 0.6;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

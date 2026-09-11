@@ -1,45 +1,49 @@
-"use client";
-
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { TheaterFeed } from "@/components/TheaterFeed";
-import { ArrowLeft, Terminal, ShieldAlert } from "lucide-react";
+import { ChevronLeft, ShieldAlert } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "War Room Theater — Tollgate",
+};
 
 export default function WarRoomPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-cyber-border pb-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-0.5 text-[14px] font-medium text-apple-blue hover:underline underline-offset-4"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        Back to Stage Overview
+      </Link>
+
+      <div className="mt-5 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-cyber-muted hover:text-cyber-accent transition-colors mb-2"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>&larr; Back to Stage Overview</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Terminal className="w-5 h-5 text-cyber-danger" />
-            <h1 className="text-xl sm:text-2xl font-bold font-mono text-cyber-text">
-              WAR ROOM // Red Team Adversarial Theater
-            </h1>
-          </div>
-          <p className="text-xs text-cyber-dim font-mono mt-1">
+          <h1 className="text-[40px] sm:text-[48px] leading-[1.05] font-semibold tracking-[-0.035em] text-apple-text">
+            War Room
+          </h1>
+          <p className="mt-1 text-[21px] tracking-[-0.015em] text-apple-secondary">Red Team Adversarial Theater</p>
+          <p className="mt-2 text-[14px] text-apple-muted">
             Real-time evolution loop &middot; Break &rarr; Patch &rarr; Price &rarr; Ship or Revert
           </p>
         </div>
 
-        <div className="p-3 rounded-lg bg-cyber-card border border-cyber-border text-xs font-mono text-cyber-dim max-w-sm">
-          <div className="flex items-center gap-1.5 text-cyber-danger font-bold mb-1">
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>The Auto-Revert Gate:</span>
-          </div>
-          Watch Round 1 revert an aggressive classifier when The Toll exceeds 10 points!
-        </div>
+        <aside className="apple-card p-4 max-w-md">
+          <p className="flex items-center gap-1.5 text-[13px] font-semibold text-apple-text">
+            <ShieldAlert className="w-4 h-4 text-[#d70015]" />
+            The Auto-Revert Gate
+          </p>
+          <p className="mt-1 text-[14px] leading-relaxed text-apple-secondary">
+            Watch Round 1 revert an aggressive classifier when The Toll exceeds 10 points!
+          </p>
+        </aside>
       </div>
 
-      {/* Main Theater Interface */}
-      <TheaterFeed />
+      <div className="mt-8">
+        <TheaterFeed />
+      </div>
     </div>
   );
 }

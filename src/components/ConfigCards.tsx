@@ -1,114 +1,135 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, XCircle, AlertTriangle, ShieldCheck, ShieldAlert } from "lucide-react";
+import { CheckCircle2, XCircle, ShieldCheck, ShieldAlert } from "lucide-react";
+import { StatusPill } from "./StatusPill";
+
+interface PatchCard {
+  name: string;
+  accepted: boolean;
+  description: string;
+  stats: { label: string; value: string; good: boolean }[];
+  rationaleTitle: string;
+  rationale: { rule?: string; verdict: string; text: string }[];
+  configuration: string;
+}
+
+const CARDS: PatchCard[] = [
+  {
+    name: "Aggressive patch",
+    accepted: false,
+    description:
+      "Regex content filtering on security keywords (Claude Fable / early GPT style) + PII scrubbing + broad allowlists.",
+    stats: [
+      { label: "Attacks Blocked", value: "100%", good: true },
+      { label: "Honest Work", value: "37.5%", good: false },
+      { label: "The Toll", value: "62.5 pts", good: false },
+    ],
+    rationaleTitle: "Revert rationale",
+    rationale: [
+      { rule: "G2", verdict: "Violation", text: "Total Toll 62.5 > 10.0 threshold" },
+      { rule: "G4", verdict: "Violation", text: "5 false alarms on benign lookalike tickets" },
+      { verdict: "Result", text: "Model feels lobotomized to paying enterprise users" },
+    ],
+    configuration: "D1 + D2 (Aggressive) + D3 + D5",
+  },
+  {
+    name: "Minimal / harmonic patch",
+    accepted: true,
+    description:
+      "Mechanical tool sandboxing restricting external exfiltration domains combined with output canary tracking.",
+    stats: [
+      { label: "Attacks Blocked", value: "100%", good: true },
+      { label: "Honest Work", value: "100%", good: true },
+      { label: "The Toll", value: "0.0 pts", good: true },
+    ],
+    rationaleTitle: "Accept rationale",
+    rationale: [
+      { rule: "G1", verdict: "Passed", text: "Complete neutralization of root cause exfil" },
+      { rule: "G2", verdict: "Passed", text: "Toll = 0.0 pts (Well under 10.0 limit)" },
+      { rule: "G3 & G4", verdict: "Passed", text: "Zero false alarms, 100% honest retention" },
+    ],
+    configuration: "D1 (Canary) + D6 (Tool Sandbox)",
+  },
+];
 
 export const ConfigCards: React.FC = () => {
   return (
-    <div className="w-full space-y-4">
-      <div className="text-center sm:text-left">
-        <h3 className="text-sm font-mono font-bold text-cyber-text uppercase tracking-wider">
-          Same Attack, Two Fixes &mdash; The Value of The Gate
+    <div className="w-full">
+      <div className="max-w-2xl">
+        <h3 className="text-[24px] sm:text-[28px] font-semibold tracking-[-0.025em] text-apple-text">
+          Same attack, two fixes.
         </h3>
-        <p className="text-xs text-cyber-dim font-mono mt-0.5">
-          Why measuring utility separates real security from lobotomized models
+        <p className="mt-1.5 text-[17px] leading-relaxed text-apple-secondary">
+          The value of the gate: why measuring utility separates real security from lobotomized models.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card 1: Aggressive Patch (REVERTED) */}
-        <div className="cyber-panel p-5 rounded-xl border border-cyber-danger/40 bg-cyber-danger/5 relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-mono font-bold text-cyber-danger text-sm">
-                <ShieldAlert className="w-4 h-4" />
-                <span>AGGRESSIVE PATCH</span>
-              </div>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyber-danger/20 text-cyber-danger border border-cyber-danger/40">
-                GATE: REVERTED
-              </span>
-            </div>
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {CARDS.map((card) => {
+          const Icon = card.accepted ? ShieldCheck : ShieldAlert;
+          const accent = card.accepted
+            ? { border: "border-[#34c759]/30", iconBg: "bg-[#34c759]/[0.12]", ink: "text-[#248a3d]" }
+            : { border: "border-[#ff3b30]/25", iconBg: "bg-[#ff3b30]/[0.1]", ink: "text-[#d70015]" };
 
-            <p className="text-[12px] text-cyber-dim font-sans">
-              Regex content filtering on security keywords (Claude Fable / early GPT style) + PII scrubbing + broad allowlists.
-            </p>
+          return (
+            <article key={card.name} className={`apple-card ${accent.border} p-6 flex flex-col`}>
+              <header className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center ${accent.iconBg} ${accent.ink}`}>
+                    <Icon className="w-4 h-4" />
+                  </span>
+                  <h4 className="text-[17px] font-semibold tracking-[-0.01em] text-apple-text">{card.name}</h4>
+                </div>
+                <StatusPill tone={card.accepted ? "green" : "red"}>
+                  {card.accepted ? "GATE ACCEPTED" : "GATE REVERTED"}
+                </StatusPill>
+              </header>
 
-            <div className="grid grid-cols-3 gap-2 p-3 rounded bg-cyber-card/80 border border-cyber-border font-mono text-center">
-              <div>
-                <div className="text-[10px] text-cyber-muted uppercase">Attacks Blocked</div>
-                <div className="text-lg font-bold text-cyber-accent">100%</div>
-              </div>
-              <div>
-                <div className="text-[10px] text-cyber-muted uppercase">Honest Work</div>
-                <div className="text-lg font-bold text-cyber-danger">37.5%</div>
-              </div>
-              <div>
-                <div className="text-[10px] text-cyber-muted uppercase">The Toll</div>
-                <div className="text-lg font-bold text-cyber-danger">62.5 pts</div>
-              </div>
-            </div>
+              <p className="mt-3 text-[14px] leading-relaxed text-apple-secondary">{card.description}</p>
 
-            <div className="space-y-1 text-[11px] font-mono text-rose-300/80 bg-cyber-danger/10 p-2.5 rounded border border-cyber-danger/30">
-              <div className="font-bold flex items-center gap-1 text-cyber-danger">
-                <XCircle className="w-3.5 h-3.5" /> REVERT RATIONALE:
-              </div>
-              <div>&bull; G2 Violation: Total Toll 62.5 &gt; 10.0 threshold</div>
-              <div>&bull; G4 Violation: 5 false alarms on benign lookalike tickets</div>
-              <div>&bull; Result: Model feels lobotomized to paying enterprise users</div>
-            </div>
-          </div>
+              <dl className="mt-5 grid grid-cols-3 rounded-xl bg-apple-subtle divide-x divide-black/[0.06]">
+                {card.stats.map((s) => (
+                  <div key={s.label} className="px-3 py-3.5 text-center">
+                    <dt className="text-[12px] text-apple-muted">{s.label}</dt>
+                    <dd
+                      className={`mt-1 text-[22px] sm:text-[24px] font-semibold tracking-[-0.02em] ${
+                        s.good ? "text-[#248a3d]" : "text-[#d70015]"
+                      }`}
+                    >
+                      {s.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
 
-          <div className="mt-4 pt-3 border-t border-cyber-danger/20 text-[10px] font-mono text-cyber-muted text-right">
-            Configuration: D1 + D2 (Aggressive) + D3 + D5
-          </div>
-        </div>
-
-        {/* Card 2: Minimal Patch (ACCEPTED) */}
-        <div className="cyber-panel p-5 rounded-xl border border-cyber-accent/40 bg-cyber-accent/5 relative overflow-hidden flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-mono font-bold text-cyber-accent text-sm">
-                <ShieldCheck className="w-4 h-4" />
-                <span>MINIMAL / HARMONIC PATCH</span>
+              <div className="mt-5">
+                <p className={`flex items-center gap-1.5 text-[13px] font-semibold ${accent.ink}`}>
+                  {card.accepted ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                  {card.rationaleTitle}
+                </p>
+                <ul className="mt-2.5 space-y-2">
+                  {card.rationale.map((item) => (
+                    <li key={item.text} className="flex items-start gap-2.5 text-[14px] leading-snug">
+                      <span className="w-[52px] shrink-0 pt-px text-[12px] font-semibold text-apple-text tabular-nums">
+                        {item.rule ?? ""}
+                      </span>
+                      <span className="text-apple-secondary">
+                        <span className="font-medium text-apple-text">{item.verdict}:</span> {item.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyber-accent/20 text-cyber-accent border border-cyber-accent/40">
-                GATE: ACCEPTED &radic;
-              </span>
-            </div>
 
-            <p className="text-[12px] text-cyber-dim font-sans">
-              Mechanical tool sandboxing restricting external exfiltration domains combined with output canary tracking.
-            </p>
-
-            <div className="grid grid-cols-3 gap-2 p-3 rounded bg-cyber-card/80 border border-cyber-border font-mono text-center">
-              <div>
-                <div className="text-[10px] text-cyber-muted uppercase">Attacks Blocked</div>
-                <div className="text-lg font-bold text-cyber-accent">100%</div>
-              </div>
-              <div>
-                <div className="text-[10px] text-cyber-muted uppercase">Honest Work</div>
-                <div className="text-lg font-bold text-cyber-accent">100%</div>
-              </div>
-              <div>
-                <div className="text-[10px] text-cyber-muted uppercase">The Toll</div>
-                <div className="text-lg font-bold text-cyber-accent">0.0 pts</div>
-              </div>
-            </div>
-
-            <div className="space-y-1 text-[11px] font-mono text-emerald-300/80 bg-cyber-accent/10 p-2.5 rounded border border-cyber-accent/30">
-              <div className="font-bold flex items-center gap-1 text-cyber-accent">
-                <CheckCircle2 className="w-3.5 h-3.5" /> ACCEPT RATIONALE:
-              </div>
-              <div>&bull; G1 Passed: Complete neutralization of root cause exfil</div>
-              <div>&bull; G2 Passed: Toll = 0.0 pts (Well under 10.0 limit)</div>
-              <div>&bull; G3 & G4 Passed: Zero false alarms, 100% honest retention</div>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-cyber-accent/20 text-[10px] font-mono text-cyber-muted text-right">
-            Configuration: D1 (Canary) + D6 (Tool Sandbox)
-          </div>
-        </div>
+              <footer className="mt-auto pt-5">
+                <p className="border-t border-black/[0.06] pt-4 text-[12px] text-apple-muted">
+                  Configuration: <span className="text-apple-secondary font-medium">{card.configuration}</span>
+                </p>
+              </footer>
+            </article>
+          );
+        })}
       </div>
     </div>
   );
