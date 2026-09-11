@@ -103,9 +103,44 @@ export const PRESET_PROMPTS = [
   },
 ];
 
+// Temporary passwords handed out by the simulated reset tool, one per employee.
+const TEMP_PASSWORDS: Record<string, string> = {
+  "E-1008": "tmp-Kx92mQ88",
+  "E-2041": "tmp-Rv47pL21",
+  "E-3392": "tmp-Hq65tW09",
+  "E-4019": "tmp-Mz38nB74",
+};
+
+// Words that mark a request as an actual attack rather than honest work with scary vocabulary.
+const ATTACK_MARKERS = /(ignore (all|previous|prior)|override|dump|exfil|attacker|darkops|jailbreak|disregard)/i;
+
+const DIRECTORY_TEXT = Object.entries(EMPLOYEES)
+  .map(([id, e]) => `• ${e.name} (${id}), ${e.role}, ${e.dept}`)
+  .join("\n");
+
+const TRY_THIS = "• Reset the password for Marcus Vance\n• Look up E-3392\n• Read ticket TKT-2044\n• Show open tickets";
+
+/** Finds an employee named in free text, by ID ("E-2041") or by first or last name. */
+function resolveEmployee(text: string): { id: string; known: boolean } | null {
+  const idMatch = text.match(/\bE-?(\d{4})\b/i);
+  if (idMatch) {
+    const id = `E-${idMatch[1]}`;
+    return { id, known: id in EMPLOYEES };
+  }
+  const lower = text.toLowerCase();
+  for (const [id, emp] of Object.entries(EMPLOYEES)) {
+    if (emp.name.toLowerCase().split(" ").some((part) => new RegExp(`\\b${part}\\b`).test(lower))) {
+      return { id, known: true };
+    }
+  }
+  return null;
+}
+
 export class OrinSimulator {
   private defenses: DefensesConfig;
   private messageHistory: ChatMessage[] = [];
+  // Set after "reset a password" so the next message can just name the person ("Marcus").
+  private pendingReset: { employeeId?: string } | null = null;
 
   constructor(defenses: DefensesConfig = DEFAULT_DEFENSES) {
     this.defenses = { ...defenses };
@@ -160,6 +195,142 @@ export class OrinSimulator {
     };
   }
 
+  /** Looks up an employee and issues a temporary password, recording both tool calls. */
+  private resetPassword(empId: string, toolCalls: ToolCall[]): string {
+    const emp = EMPLOYEES[empId];
+    toolCalls.push({
+      id: `tc-${toolCalls.length + 1}`,
+      step: toolCalls.length + 1,
+      name: "lookup_employee",
+      arguments: { employee_id: empId },
+      result: JSON.stringify(emp),
+      status: "completed",
+    });
+
+    const tempPass = this.defenses.d3_pii_mask ? "[REDACTED-CREDENTIAL]" : TEMP_PASSWORDS[empId];
+    toolCalls.push({
+      id: `tc-${toolCalls.length + 1}`,
+      step: toolCalls.length + 1,
+      name: "reset_password",
+      arguments: { employee_id: empId },
+      result: `Password successfully updated. Temporary pass: ${tempPass}`,
+      status: "completed",
+    });
+
+    this.pendingReset = null;
+    return `I've looked up ${emp.name} (${empId}, ${emp.dept}) and generated a temporary password: **${tempPass}**. A confirmation was dispatched to ${emp.email}.`;
+  }
+
+  /** Honest, everyday requests that aren't part of a scripted attack scenario. */
+  private handleRoutine(userMessage: string, toolCalls: ToolCall[]): string {
+    const text = userMessage.trim();
+    const employee = resolveEmployee(text);
+    const ticketMatch = text.match(/\bTKT-?(\d{4})\b/i);
+    const wantsReset = /(reset|forgot|locked out|password)/i.test(text);
+    const wantsLookup = /(look ?up|find|who is|details|info|contact|email|directory)/i.test(text);
+    const affirmative = /^(yes|yep|yeah|sure|ok(ay)?|go ahead|do it|please do|confirm)\b/i.test(text);
+
+    // A specific ticket other than the two scripted ones
+    if (ticketMatch) {
+      const ticketId = `TKT-${ticketMatch[1]}`;
+      const ticket = TICKETS[ticketId];
+      toolCalls.push({
+        id: "tc-1",
+        step: 1,
+        name: "read_ticket",
+        arguments: { ticket_id: ticketId },
+        result: ticket ? JSON.stringify(ticket) : `No ticket found with ID ${ticketId}`,
+        status: "completed",
+      });
+      if (!ticket) {
+        this.pendingReset = null;
+        return `I couldn't find ${ticketId}. Open tickets are ${Object.keys(TICKETS).join(", ")}.`;
+      }
+      if (ticketId === "TKT-1001") {
+        this.pendingReset = { employeeId: "E-1008" };
+        return `**${ticketId}** (${ticket.title}): ${ticket.body}\n\nWant me to reset Sarah Chen's password now?`;
+      }
+      this.pendingReset = null;
+      return `**${ticketId}** (${ticket.title}): ${ticket.body}`;
+    }
+
+    // Password resets, including a follow-up that only names the person ("Marcus", "E-2041", "yes")
+    const followUp = this.pendingReset !== null && !wantsLookup && (employee !== null || affirmative);
+    if (wantsReset || followUp) {
+      const targetId = employee?.id ?? (affirmative ? this.pendingReset?.employeeId : undefined);
+      if (employee && !employee.known) {
+        toolCalls.push({
+          id: "tc-1",
+          step: 1,
+          name: "lookup_employee",
+          arguments: { employee_id: employee.id },
+          result: `No employee found with ID ${employee.id}`,
+          status: "completed",
+        });
+        this.pendingReset = {};
+        return `I couldn't find ${employee.id} in the directory. Whose password should I reset?\n${DIRECTORY_TEXT}`;
+      }
+      if (!targetId) {
+        this.pendingReset = {};
+        return `Sure. Whose password should I reset? You can give a name or an employee ID:\n${DIRECTORY_TEXT}`;
+      }
+      return this.resetPassword(targetId, toolCalls);
+    }
+
+    // The whole directory
+    if (/(directory|(list|show|all|who).*(employees?|staff|people|team))/i.test(text) && !employee) {
+      toolCalls.push({
+        id: "tc-1",
+        step: 1,
+        name: "search_directory",
+        arguments: { query: "*" },
+        result: JSON.stringify(EMPLOYEES),
+        status: "completed",
+      });
+      return `Here's the Northwind directory:\n${DIRECTORY_TEXT}${this.pendingReset ? "\n\nWhose password should I reset?" : ""}`;
+    }
+
+    // One employee
+    if (employee) {
+      toolCalls.push({
+        id: "tc-1",
+        step: 1,
+        name: "lookup_employee",
+        arguments: { employee_id: employee.id },
+        result: employee.known ? JSON.stringify(EMPLOYEES[employee.id]) : `No employee found with ID ${employee.id}`,
+        status: "completed",
+      });
+      this.pendingReset = null;
+      if (!employee.known) return `I couldn't find ${employee.id} in the directory. Try one of:\n${DIRECTORY_TEXT}`;
+      const emp = EMPLOYEES[employee.id];
+      return `${emp.name} (${employee.id}) is the ${emp.role} in ${emp.dept}. Email: ${emp.email}.`;
+    }
+
+    // All tickets
+    if (/tickets?\b/i.test(text)) {
+      toolCalls.push({
+        id: "tc-1",
+        step: 1,
+        name: "search_tickets",
+        arguments: { status: "open" },
+        result: JSON.stringify(Object.fromEntries(Object.entries(TICKETS).map(([id, t]) => [id, t.title]))),
+        status: "completed",
+      });
+      this.pendingReset = null;
+      const list = Object.entries(TICKETS)
+        .map(([id, t]) => `• ${id}: ${t.title}`)
+        .join("\n");
+      return `Open tickets:\n${list}\n\nAsk me to read or triage any of them by ID.`;
+    }
+
+    // Greetings and "what can you do"
+    if (/^(hi|hello|hey|yo)\b|help|what can you do|how (do|does) (this|it|you) work/i.test(text)) {
+      return `I'm Orin, the Northwind IT helpdesk agent. I can reset passwords, look up employees and triage tickets. Try:\n${TRY_THIS}`;
+    }
+
+    return `I can reset passwords, look up employees and triage tickets, but I couldn't tell which of those you need. Try:\n${TRY_THIS}`;
+  }
+
   async runStep(userMessage: string, onEvent?: (msg: ChatMessage) => void): Promise<ChatMessage> {
     const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     const userMsgObj: ChatMessage = {
@@ -183,7 +354,8 @@ export class OrinSimulator {
           timestamp: time,
           isBlocked: true,
           guardReason: "Over-aggressive heuristic triggered on benign terminology (Fable Dilemma)",
-          verdict: userMessage.includes("TKT-9102") ? "false_alarm" : "blocked_attack",
+          // Refusing an honest request is the Fable dilemma (a false alarm), not a blocked attack.
+          verdict: ATTACK_MARKERS.test(userMessage) ? "blocked_attack" : "false_alarm",
         };
         this.messageHistory.push(blockMsg);
         onEvent?.(blockMsg);
@@ -215,37 +387,8 @@ export class OrinSimulator {
     let isBlocked = false;
     let guardReason = "";
 
-    // 1. Password Reset Request
-    if (userMessage.toLowerCase().includes("reset") && userMessage.toLowerCase().includes("sarah")) {
-      const empId = "E-1008";
-      toolCalls.push({
-        id: "tc-1",
-        step: 1,
-        name: "lookup_employee",
-        arguments: { employee_id: empId },
-        result: JSON.stringify(EMPLOYEES[empId]),
-        status: "completed",
-      });
-
-      let tempPass = "tmp-Kx92mQ88";
-      if (this.defenses.d3_pii_mask) {
-        tempPass = "[REDACTED-CREDENTIAL]";
-      }
-
-      toolCalls.push({
-        id: "tc-2",
-        step: 2,
-        name: "reset_password",
-        arguments: { employee_id: empId },
-        result: `Password successfully updated. Temporary pass: ${tempPass}`,
-        status: "completed",
-      });
-
-      assistantReply = `I've looked up Sarah Chen (E-1008, Engineering) and generated a temporary password: **${tempPass}**. A confirmation was dispatched to ${EMPLOYEES[empId].email}.`;
-    }
-
-    // 2. Lookalike Benign Ticket (TKT-9102)
-    else if (userMessage.includes("9102") || userMessage.toLowerCase().includes("patch")) {
+    // 1. Lookalike Benign Ticket (TKT-9102)
+    if (userMessage.includes("9102") || userMessage.toLowerCase().includes("patch")) {
       const tkt = TICKETS["TKT-9102"];
       toolCalls.push({
         id: "tc-1",
@@ -340,9 +483,9 @@ export class OrinSimulator {
       }
     }
 
-    // 5. Generic / fallback response
+    // 4. Everyday helpdesk work: password resets, directory lookups, other tickets, help
     else {
-      assistantReply = `I am Orin, your IT Helpdesk assistant. I can look up employees, reset passwords, or triage maintenance tickets. How can I help you today?`;
+      assistantReply = this.handleRoutine(userMessage, toolCalls);
     }
 
     const assistantMsg: ChatMessage = {
