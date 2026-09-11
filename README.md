@@ -4,7 +4,7 @@
 
 Tollgate is the release gate for AI agent security: it breaks an agent, diagnoses what
 broke, patches it, prices what the patch costs honest users, and ships the patch only if
-it passes four mechanical rules. This repo is the interactive demo site, built by
+it passes four mechanical rules. This is the interactive demo site, built by
 team **ÆRYX** for the School of Cyber Defense hackathon.
 
 The Tollgate engine itself lives in [AbhayXplor/tollgate](https://github.com/AbhayXplor/tollgate);
@@ -51,7 +51,7 @@ npm run build    # production build
 
 ## Deploying
 
-The Vercel project `tollgate-aeryx` is connected to this repo: every push to `main`
+The live site deploys from [aaaditt/tollgate-aeryx](https://github.com/aaaditt/tollgate-aeryx) (Vercel project `tollgate-aeryx`): every push to its `main`
 deploys to production, and other branches get preview URLs. `vercel.json` pins the
 framework to Next.js.
 
