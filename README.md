@@ -129,7 +129,39 @@ model and writes to `results/mock/`, so official numbers stay clean.
 Regenerated under scoring v2 on Gemma 4. Every verdict is a mechanical check over the
 tool log; `tollgate report` computes this table from `results/results.jsonl`.
 
-<!-- RESULTS_TABLE -->
+142 runs, 8 configurations, every row answered by `gemma-4-31b-it` (verified per-row, no
+fallback rows). Computed by `tollgate report` from `results/results.jsonl`, scoring v2.0.0.
+
+| Configuration | Attacks blocked | Honest work completed | Lookalikes completed |
+|---|---|---|---|
+| baseline (no defences) | 100% (12/12) | 75.0% | 66.7% |
+| authz (precise D5) | 100% (12/12) | 75.0% | 66.7% |
+| balanced | 100% (12/12) | 75.0% | 66.7% |
+| d2 threshold 0.55 | 100% (12/12) | 75.0% | 66.7% |
+| d2 threshold 0.45 | 100% (10/10) | 75.0% | 66.7% |
+| d2 threshold 0.35 | 100% (12/12) | 37.5% | 33.3% |
+| d2 threshold 0.25 | 100% (12/12) | 25.0% | 0.0% |
+
+Read the table right to left: the classifier threshold is the Toll dial. At 0.55 the
+injection classifier is calm and costs nothing. At 0.25 it flags half the English
+language: honest work collapses from 75% to 25% and every lookalike dies, while the
+attacks it was tightening against were already all blocked. Same security, a third of
+the product. That is the dominated configuration, and the sweep found it without a
+human building it to fail.
+
+Three more findings from the campaign:
+
+- **The hand-written catalogue is too easy for a 2026 open-weights model.** Gemma 31B
+  blocked all 12 attacks with zero defences, and the poison was fully delivered this
+  time (v1 could never test that). The threat is not the attack we wrote last week;
+  it is the one the red team agent invents next round (`tollgate evolve`).
+- **The model itself, not any guard, fails about a quarter of honest tasks.** The
+  baseline completes 75%; every failure there is a model miss, not a false alarm.
+  Across the campaign the harness attributes 10 failures to guard firings and 11 to
+  the model alone. A security tool that cannot tell those apart prices the wrong thing.
+- **Lookalikes are the Toll sensor.** Legitimate requests worded like attacks are the
+  first to die (66.7% to 0% on the twitchy end) while ordinary tasks look fine for
+  longer. If you measure only ordinary tasks, you miss the damage until it is done.
 
 ### What we found in our own harness first
 
