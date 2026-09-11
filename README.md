@@ -354,5 +354,3 @@ agents sharing one free-tier key stay inside the rate limit.
 Everything here attacks a self-built agent running locally on fake data. The
 employees, salaries, addresses, and API keys are invented. Nothing external is
 ever targeted.
-
-*Built for School of Cyber Defense 2026, final round at GISEC Global, Dubai.*
