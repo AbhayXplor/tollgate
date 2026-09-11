@@ -27,4 +27,7 @@ results/theater_mock*
 DEVLOG.md
 
 # local-only demo site, never publish
-site/
+website/
+
+# local demo-site evidence, stays local with the site
+results/web/
