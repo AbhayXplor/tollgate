@@ -25,3 +25,6 @@ results/theater_mock*
 
 # local-only handoff doc, never publish
 DEVLOG.md
+
+# local-only demo site, never publish
+site/
