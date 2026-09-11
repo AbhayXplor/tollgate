@@ -65,7 +65,7 @@ export const ConfigCards: React.FC = () => {
         </p>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div data-tour="config-cards" className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
         {CARDS.map((card) => {
           const Icon = card.accepted ? ShieldCheck : ShieldAlert;
           const accent = card.accepted

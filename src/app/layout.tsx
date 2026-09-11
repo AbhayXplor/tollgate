@@ -33,7 +33,7 @@ export default function RootLayout({
         <main>{children}</main>
         <footer className="mt-32 border-t border-black/[0.06]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row md:items-center justify-between gap-4 text-[12px] text-apple-muted">
-            <p>Tollgate &copy; 2026 &middot; School of Cyber Defense / GISEC 2026</p>
+            <p>Tollgate &copy; 2026 &middot; School of Cyber Defense / ÆRYX</p>
             <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <code className="font-mono text-[11.5px] text-apple-text bg-apple-subtle border border-black/[0.06] rounded-md px-2 py-0.5">
                 tollgate demo --mock

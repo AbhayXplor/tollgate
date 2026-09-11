@@ -253,7 +253,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         </div>
 
         {/* Demo scenarios */}
-        <div className="px-4 py-2.5 border-b border-black/[0.06] bg-apple-bg flex flex-wrap items-center gap-2">
+        <div data-tour="scenarios" className="px-4 py-2.5 border-b border-black/[0.06] bg-apple-bg flex flex-wrap items-center gap-2">
           <span className="text-[12px] text-apple-muted shrink-0 pr-1">Demo scenarios</span>
           {PRESET_PROMPTS.map((p) => (
             <button
@@ -395,7 +395,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             subtitle="Calculated live from active defense parameters"
           />
 
-          <div className="apple-card overflow-hidden">
+          <div data-tour="defense-matrix" className="apple-card overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3">
               <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-apple-text">Defense matrix</h3>
               <StatusPill tone={metrics.gateStatus === "ACCEPTED" ? "green" : "red"}>

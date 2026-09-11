@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { GuidedTour, TourStep, TOUR_EVENT } from "@/components/GuidedTour";
 import { HeroScene } from "@/components/HeroScene";
 import { TollMeter } from "@/components/TollMeter";
 import { ChatPanel } from "@/components/ChatPanel";
@@ -26,9 +27,182 @@ const RULE_CELL_BORDERS = [
   "border-t lg:border-t-0 sm:border-l sm:pl-6",
 ];
 
+const TOUR_SEEN_KEY = "tollgate-tour-seen-v1";
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<StageTab>("orin");
   const [copied, setCopied] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+
+  // First visit opens the tour once; the navbar's Tour button (or /?tour=1) replays it.
+  useEffect(() => {
+    const start = () => setTourOpen(true);
+    window.addEventListener(TOUR_EVENT, start);
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tour") === "1") {
+      window.history.replaceState(null, "", window.location.pathname);
+      timer = setTimeout(start, 400);
+    } else {
+      let seen = false;
+      try {
+        seen = localStorage.getItem(TOUR_SEEN_KEY) === "1";
+      } catch {
+        // Storage blocked: fall through and show the tour.
+      }
+      if (!seen) timer = setTimeout(start, 1400);
+    }
+
+    return () => {
+      window.removeEventListener(TOUR_EVENT, start);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  const closeTour = useCallback(() => {
+    setTourOpen(false);
+    try {
+      localStorage.setItem(TOUR_SEEN_KEY, "1");
+    } catch {
+      // Storage blocked: the tour simply shows again next visit.
+    }
+  }, []);
+
+  const tourSteps: TourStep[] = [
+    {
+      id: "welcome",
+      title: "Welcome to Tollgate",
+      body: (
+        <>
+          Tollgate decides whether a security patch for an AI agent ships or gets rolled back, based on what it
+          costs honest users. This tour shows you around the page in about a minute.
+        </>
+      ),
+    },
+    {
+      id: "loop",
+      target: "loop",
+      overlay: "top-right",
+      title: "The loop every patch goes through",
+      body: (
+        <>
+          Six stages: break the agent, diagnose why, patch it, price the cost, run the gate, then ship or
+          revert. The ring turns to whichever stage is
+          running. Pick a stage in the bar at the bottom to read what happens there.
+        </>
+      ),
+    },
+    {
+      id: "toll",
+      target: "toll",
+      mobileTarget: "toll-meter",
+      title: "The Toll: what safety costs",
+      body: (
+        <>
+          The Toll is how many points of honest work a patch destroys: task completion before the patch minus
+          task completion after it. On the meter, the black tick marks the 10-point limit. Past it, the patch is
+          reverted automatically.
+        </>
+      ),
+    },
+    {
+      id: "gate-rules",
+      target: "gate-rules",
+      title: "Four rules decide",
+      body: (
+        <>
+          No human judgment call. A patch ships only if it really cuts attacks (G1), costs 10 points or less (G2),
+          keeps ordinary tasks working (G3), and adds zero false alarms (G4).
+        </>
+      ),
+    },
+    {
+      id: "stage-tabs",
+      target: "stage-tabs",
+      title: "Two live demos",
+      body: (
+        <>
+          Switch between the <strong className="text-apple-text font-medium">Orin Helpdesk</strong>, a chat with
+          an AI IT agent, and the <strong className="text-apple-text font-medium">War Room</strong>, where the
+          attack-and-patch loop runs round by round.
+        </>
+      ),
+      onEnter: () => setActiveTab("orin"),
+    },
+    {
+      id: "scenarios",
+      target: "scenarios",
+      title: "Try a scenario",
+      body: (
+        <>
+          Each button sends a ready-made message to Orin. Green is ordinary work, amber is honest work that sounds
+          risky, red is an attack. Orin&apos;s reply lists every tool it called and any call the guard blocked.
+        </>
+      ),
+      onEnter: () => setActiveTab("orin"),
+    },
+    {
+      id: "defense-matrix",
+      target: "defense-matrix",
+      title: "Switch defenses on and off",
+      body: (
+        <>
+          Each switch is one defense, and the Toll meter above it updates instantly. Turn on{" "}
+          <strong className="text-apple-text font-medium">D2 Aggressive</strong>, then run the amber scenario: the
+          filter refuses honest work and the gate reverts it.
+        </>
+      ),
+      onEnter: () => setActiveTab("orin"),
+    },
+    {
+      id: "warroom",
+      target: "warroom",
+      overlay: "middle-right",
+      title: "Watch the loop run",
+      body: (
+        <>
+          Press <strong className="text-apple-text font-medium">Start run</strong>. A red team attacks, a patch is
+          written and priced, and the gate accepts or reverts it, all logged here. You can also type your own
+          attack in the bar at the bottom.
+        </>
+      ),
+      onEnter: () => setActiveTab("warroom"),
+    },
+    {
+      id: "frontier",
+      target: "frontier",
+      title: "Every defense, plotted",
+      body: (
+        <>
+          Each dot is one defense setup: attacks blocked from left to right, honest work kept from bottom to top.
+          Hollow red dots were reverted by the gate. Select a dot to see which rules it failed.
+        </>
+      ),
+    },
+    {
+      id: "config-cards",
+      target: "config-cards",
+      title: "Same attack, two fixes",
+      body: (
+        <>
+          The blunt fix stops the attack but costs 62.5 points of honest work, so the gate reverts it. The precise
+          fix stops the same attack at zero cost and ships.
+        </>
+      ),
+    },
+    {
+      id: "done",
+      title: "You're all set",
+      body: (
+        <>
+          A good first move: open the Orin Helpdesk and try the red scenario. You can replay this tour anytime
+          from <strong className="text-apple-text font-medium">Tour</strong> in the top bar.
+        </>
+      ),
+      onEnter: () => setActiveTab("orin"),
+    },
+  ];
 
   const openStage = (tab: StageTab) => {
     setActiveTab(tab);
@@ -46,12 +220,13 @@ export default function HomePage() {
   };
 
   return (
+    <>
     <div className="space-y-28 sm:space-y-36">
       {/* 1. HERO */}
       <section className="pt-10 sm:pt-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto text-center">
           <p className="text-[14px] sm:text-[15px] font-medium text-apple-secondary">
-            School of Cyber Defense &middot; GISEC 2026
+            School of Cyber Defense &middot; ÆRYX
           </p>
 
           <h1 className="mt-2 text-[64px] sm:text-[88px] lg:text-[96px] leading-[0.95] font-bold tracking-[-0.045em] text-apple-text">
@@ -87,6 +262,16 @@ export default function HomePage() {
               Explore Frontier
             </a>
           </div>
+          <p className="mt-4 text-[14px] text-apple-muted">
+            New here?{" "}
+            <button
+              type="button"
+              onClick={() => setTourOpen(true)}
+              className="font-medium text-apple-blue hover:underline underline-offset-4"
+            >
+              Take the one-minute tour
+            </button>
+          </p>
 
           <div className="mt-10 sm:mt-12">
             <HeroScene />
@@ -96,7 +281,7 @@ export default function HomePage() {
 
       {/* 2. THE PROBLEM & THE TOLL */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+        <div data-tour="toll" className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
           <div className="lg:col-span-7">
             <p className="text-[15px] font-semibold text-[#b25e00]">The unmeasured cost of safety</p>
             <h2 className="mt-2 text-[34px] sm:text-[44px] leading-[1.08] font-semibold tracking-[-0.03em] text-apple-text">
@@ -121,14 +306,14 @@ export default function HomePage() {
           </div>
 
           <div className="lg:col-span-5 flex justify-center">
-            <div className="w-full max-w-sm">
+            <div data-tour="toll-meter" className="w-full max-w-sm">
               <TollMeter toll={62.5} title="Fable-scale utility collapse" subtitle="Demonstrating an un-gated aggressive patch" />
             </div>
           </div>
         </div>
 
         {/* The four gate rules */}
-        <div className="mt-16">
+        <div data-tour="gate-rules" className="mt-16">
           <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-apple-text">
             The gate ships a patch only if all four rules hold.
           </h3>
@@ -164,6 +349,7 @@ export default function HomePage() {
 
           {/* Segmented control with a sliding thumb */}
           <div
+            data-tour="stage-tabs"
             role="tablist"
             aria-label="Demo"
             className="relative grid grid-cols-2 p-1 rounded-full bg-black/[0.05] shrink-0 self-start md:self-auto"
@@ -257,5 +443,9 @@ export default function HomePage() {
         </div>
       </section>
     </div>
+
+    {/* Outside the spaced stack so no sibling margin offsets the fixed overlay */}
+    <GuidedTour steps={tourSteps} open={tourOpen} onClose={closeTour} />
+    </>
   );
 }

@@ -2,8 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Shield, ArrowUpRight } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Shield, ArrowUpRight, Compass } from "lucide-react";
+import { TOUR_EVENT } from "./GuidedTour";
 
 const NAV_LINKS = [
   { href: "/", label: "Overview & Stage", short: "Overview" },
@@ -36,6 +37,13 @@ const SegmentedNav: React.FC<{ pathname: string; className?: string }> = ({ path
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // The tour lives on the home page: start it in place there, or navigate home and start it.
+  const startTour = () => {
+    if (pathname === "/") window.dispatchEvent(new Event(TOUR_EVENT));
+    else router.push("/?tour=1");
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-black/[0.06] bg-white/80 backdrop-blur-xl backdrop-saturate-150">
@@ -57,7 +65,15 @@ export const Navbar: React.FC = () => {
         <SegmentedNav pathname={pathname} className="hidden md:flex" />
 
         {/* Status & GitHub */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <button
+            type="button"
+            onClick={startTour}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium text-apple-blue hover:bg-apple-blue/[0.08] transition-colors"
+          >
+            <Compass className="w-3.5 h-3.5" />
+            Tour
+          </button>
           <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#34c759]/[0.1] text-[12px] font-medium text-[#248a3d]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#34c759]" />
             Booth Ready

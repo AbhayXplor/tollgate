@@ -135,7 +135,7 @@ export const FrontierChart: React.FC = () => {
       </div>
 
       {/* Plot */}
-      <div className="relative mt-6 w-full max-w-4xl mx-auto">
+      <div data-tour="frontier" className="relative mt-6 w-full max-w-4xl mx-auto">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full h-auto overflow-visible select-none"

@@ -325,7 +325,7 @@ export const TheaterFeed: React.FC = () => {
       </div>
 
       {/* Console */}
-      <div className="apple-card overflow-hidden flex flex-col h-[560px]">
+      <div data-tour="warroom" className="apple-card overflow-hidden flex flex-col h-[560px]">
         {/* Header & controls */}
         <div className="px-5 py-3.5 border-b border-black/[0.06] flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">

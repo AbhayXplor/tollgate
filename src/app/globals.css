@@ -26,10 +26,13 @@ body {
   background: rgba(0, 113, 227, 0.18);
 }
 
-/* One keyboard focus treatment for every control that doesn't define its own. */
-:focus-visible {
-  outline: 2px solid #0071e3;
-  outline-offset: 2px;
+/* One keyboard focus treatment for every control that doesn't define its own.
+   In the base layer so utilities like `outline-none` can still opt out. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid #0071e3;
+    outline-offset: 2px;
+  }
 }
 
 /* Quiet light scrollbars */

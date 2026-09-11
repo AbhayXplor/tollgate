@@ -448,7 +448,7 @@ export const HeroScene: React.FC = () => {
 
   return (
     <figure className="w-full">
-      <div className="relative w-full h-[440px] sm:h-[500px] md:h-[560px] rounded-stage border border-black/[0.06] bg-gradient-to-b from-[#fbfbfd] via-white to-[#f5f5f7] overflow-hidden">
+      <div data-tour="loop" className="relative w-full h-[440px] sm:h-[500px] md:h-[560px] rounded-stage border border-black/[0.06] bg-gradient-to-b from-[#fbfbfd] via-white to-[#f5f5f7] overflow-hidden">
         {/* Three.js canvas */}
         <div ref={containerRef} className="absolute inset-0" aria-hidden="true" />
 
