@@ -16,6 +16,58 @@ before it ships.
 break -> diagnose -> patch -> price -> gate -> ACCEPT or REVERT -> keep breaking
 ```
 
+## Who this is for
+
+**The buyer:** any team deploying an AI agent with real permissions - support
+desk automation, internal IT agents, ops agents that can touch records, send
+email, or reset credentials. Today they install a guardrail, ship it, and find
+out from angry customers what it broke.
+
+**What it replaces:** vibes-based guardrail releases. The current process is a
+manual red-team-before-launch at best, and nothing at worst. Tollgate is the
+checkpoint between "we added a security rule" and "we shipped it to customers."
+
+**Positioning:** Garak and PromptFoo probe models for failures. Tollgate prices
+the fix. Probing tools answer "can it be attacked?"; Tollgate answers the two
+questions that decide whether a security change ships: did the attack actually
+stop, and what did the defence cost the honest users?
+
+## Three AIs fight, a machine referees
+
+The architecture is three AI systems inside a deterministic harness:
+
+1. **An attacker AI** (the red team agent) reads its own failure history each
+   round and invents a new attack aimed at what worked last time. It is not a
+   script; its moves are generated fresh every round.
+2. **A target AI** (Orin, the helpdesk agent) does honest work with real tools
+   while defending itself under whatever security configuration is being tested.
+3. **A learning guard** (the D2 classifier) retrains every round on the labels
+   the fight produces: attacks are malicious, honest work and false-alarm bait
+   are benign. It gets smarter because the attacker gets smarter.
+
+None of the three decides the score. Eight mechanical oracles read the tool log
+and produce yes/no verdicts that cannot be sweet-talked, and a four-rule gate
+makes the ship/revert decision the way CI makes a build decision. Learners
+propose; the machine disposes.
+
+## Receipts: things that actually happened in recorded runs
+
+- **The attacker invented an attack no human wrote.** In a live run, given only
+  its failure history, the red team agent drafted an "external auditor performing
+  a compliance check" pretext and planted a poisoned ticket to deliver it. That
+  attack does not exist in any file in this repo.
+- **The gate refused a bad fix.** Faced with an attack succeeding, the blunt
+  patch (tools switched off) was priced: attack success fell, but honest work
+  collapsed from 100% to 37.5% with five new false alarms. The gate failed it on
+  three rules and auto-reverted it; the precise patch shipped at zero Toll.
+- **Our own scoreboard was lying, and we caught it.** Version 1 of the harness
+  truncated every tool result to 200 characters, so attacks were never fully
+  delivered, and its headline ("baseline blocks 100%") was a delivery bug. The
+  fake results are archived with a do-not-cite note, every bug has a regression
+  test, and the classifier's first accuracy claim (0.91) turned out to be the
+  majority-class rate - the metrics now always print that baseline beside them.
+  A measuring instrument that is never checked reports whatever its bugs allow.
+
 ## What happened when we ran it
 
 We swept one agent, twelve attacks, eight honest tasks, and eight security
@@ -181,6 +233,22 @@ Watch both endings: `tollgate immune --mode aggressive` and `--mode minimal`.
 4. The gate prices the retrained classifier by replaying the round's attack plus
    the full honest suite. Reject reverts the config and the model weights but keeps
    the labels: labels are facts, the model is just the current patch.
+
+## Status and roadmap
+
+**Shipped and measured:** the full loop (sweep, immune, evolve, frontier), the
+mechanical referee, the four-rule gate with auto-revert, the trainable D2
+classifier with honest metrics, the red team agent, the live browser theater,
+142 offline-reproducible tests, CI on every pull request, and the measured
+campaign above.
+
+**Designed, not built:** D4 (quarantine of untrusted content before it reaches
+the model) - the interface exists in the guard stack.
+
+**Next:** a second target agent (finance/ops toolset) to prove the harness is
+generic, a GitHub Action so agent-config PRs get gated like CI, repeat campaigns
+for error bars, and longer evolve runs so the attacker has more rounds to work
+with.
 
 ## Quick start
 
