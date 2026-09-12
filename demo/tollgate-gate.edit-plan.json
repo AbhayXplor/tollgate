@@ -1,0 +1,257 @@
+{
+  "job": "tollgate-gate",
+  "source": "remotion/public/jobs/tollgate-gate/raw.webm",
+  "output": {
+    "width": 1440,
+    "height": 900,
+    "fps": 30,
+    "aspect": "source",
+    "cropFocus": 0.5
+  },
+  "segments": [
+    {
+      "start": 1.889,
+      "end": 5.642,
+      "speed": 1.1038
+    },
+    {
+      "start": 5.642,
+      "end": 11.292,
+      "speed": 1.5107
+    },
+    {
+      "start": 11.292,
+      "end": 16.927,
+      "speed": 1.1838
+    },
+    {
+      "start": 16.927,
+      "end": 20.528,
+      "speed": 1.1768
+    },
+    {
+      "start": 20.528,
+      "end": 24.828,
+      "speed": 1.2647
+    },
+    {
+      "start": 24.829,
+      "end": 27.429,
+      "speed": 1.0924
+    },
+    {
+      "start": 27.43,
+      "end": 31.83,
+      "speed": 1.0784
+    },
+    {
+      "start": 31.83,
+      "end": 36.231,
+      "speed": 1.4382
+    },
+    {
+      "start": 36.231,
+      "end": 38.833,
+      "speed": 1.0933
+    },
+    {
+      "start": 38.833,
+      "end": 44.334,
+      "speed": 1.6179
+    },
+    {
+      "start": 44.334,
+      "end": 50.835,
+      "speed": 2
+    },
+    {
+      "start": 50.835,
+      "end": 56.036,
+      "speed": 1.5297
+    }
+  ],
+  "overlays": [
+    {
+      "type": "progressBar",
+      "color": "#FFD230"
+    },
+    {
+      "type": "titleCard",
+      "position": "intro",
+      "durationInSeconds": 2.4,
+      "title": "demotape phase 5: one-command pipeline, rebrand, docs",
+      "subtitle": "aaaditt/video-editor · main"
+    },
+    {
+      "type": "animatedText",
+      "from": 0.18,
+      "to": 3.22,
+      "text": "This is Tollgate: the release gate for AI agent security",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 3.5800000000000005,
+      "to": 6.960000000000001,
+      "text": "One click runs the whole search against an offline rehearsal model",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 7.32,
+      "to": 11.720000000000002,
+      "text": "Eight attacks hit the agent with no defences. The oracles read the tool log",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 12.080000000000002,
+      "to": 14.780000000000003,
+      "text": "Salaries and API keys walk out through ordinary-looking tickets",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 15.140000000000002,
+      "to": 18.180000000000003,
+      "text": "Then every proposed fix is priced in lost honest work",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 18.540000000000003,
+      "to": 20.560000000000002,
+      "text": "Proposal one: lock the tools down hard",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 20.92,
+      "to": 24.64,
+      "text": "Attacks stopped. But the toll lands on the customers: three false alarms",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 25,
+      "to": 27.7,
+      "text": "The gate refuses the trade and reverts the patch",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 28.06,
+      "to": 30.08,
+      "text": "Proposal two is precise instead of blunt",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 30.439999999999998,
+      "to": 33.48,
+      "text": "The same attacks still stop. The honest work still flows",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 33.839999999999996,
+      "to": 36.7305,
+      "text": "Same protection, zero lost work: the gate ships it",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "animatedText",
+      "from": 37.0905,
+      "to": 40.1305,
+      "text": "Every verdict came from the tool log. Every number replays",
+      "animation": "word-pop",
+      "position": "bottom",
+      "backdrop": true
+    },
+    {
+      "type": "clickRing",
+      "at": 4.385638938053098,
+      "x": 0.19480251736111112,
+      "y": 0.1111111111111111,
+      "durationInSeconds": 0.7,
+      "color": "#FFD230"
+    },
+    {
+      "type": "clickRing",
+      "at": 5.515582300884955,
+      "x": 0.26702473958333334,
+      "y": 0.1111111111111111,
+      "durationInSeconds": 0.7,
+      "color": "#FFD230"
+    },
+    {
+      "type": "clickRing",
+      "at": 6.609780530973452,
+      "x": 0.42926432291666666,
+      "y": 0.1111111111111111,
+      "durationInSeconds": 0.7,
+      "color": "#FFD230"
+    },
+    {
+      "type": "zoom",
+      "from": 3.6500000000000004,
+      "to": 6.99,
+      "region": {
+        "x": 0.11926432291666667,
+        "y": 0,
+        "width": 0.62,
+        "height": 0.62
+      },
+      "easeInSeconds": 0.5
+    },
+    {
+      "type": "zoom",
+      "from": 25.07,
+      "to": 27.73,
+      "region": {
+        "x": 0,
+        "y": 0.38,
+        "width": 1,
+        "height": 0.62
+      },
+      "easeInSeconds": 0.5
+    },
+    {
+      "type": "zoom",
+      "from": 33.91,
+      "to": 36.7605,
+      "region": {
+        "x": 0,
+        "y": 0.38,
+        "width": 1,
+        "height": 0.62
+      },
+      "easeInSeconds": 0.5
+    }
+  ],
+  "audio": {
+    "sfx": []
+  }
+}
